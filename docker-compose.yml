@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: jarvis_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-jarvis}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-jarvis}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  qdrant:
+    image: qdrant/qdrant:v1.9.0
+    container_name: jarvis_qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: jarvis_redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: jarvis_backend
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-jarvis}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-jarvis}
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:?JWT_SECRET_KEY must be set in .env}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:?GEMINI_API_KEY must be set in .env}
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY:-}
+      - GBRAIN_ADMIN_BOOTSTRAP_TOKEN=${GBRAIN_ADMIN_BOOTSTRAP_TOKEN:?GBRAIN_ADMIN_BOOTSTRAP_TOKEN must be set in .env}
+      - JARVIS_VAULT_PATH=/vault
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - qdrant
+      - redis
+    volumes:
+      - ./backend:/app
+      - ${JARVIS_VAULT_PATH}:/vault
+    command: sh /app/start.sh
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: jarvis_frontend
+    ports:
+      - "4000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+    depends_on:
+      - backend
+    command: npm run dev
+
+  gbrain:
+    image: oven/bun:1-alpine
+    container_name: jarvis_gbrain
+    network_mode: "service:backend"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GBRAIN_ADMIN_BOOTSTRAP_TOKEN=${GBRAIN_ADMIN_BOOTSTRAP_TOKEN:?GBRAIN_ADMIN_BOOTSTRAP_TOKEN must be set in .env}
+    volumes:
+      - ${JARVIS_VAULT_PATH}:/vault
+      - gbrain_data:/root/.gbrain
+    command: >
+      sh -c "bun install -g github:garrytan/gbrain && ([ ! -f /root/.gbrain/config.json ] && gbrain init --pglite --no-embedding || true) && gbrain serve --http --port 8001 --host 0.0.0.0"
+    restart: always
+
+volumes:
+  postgres_data:
+  qdrant_data:
+  redis_data:
+  gbrain_data:
+
