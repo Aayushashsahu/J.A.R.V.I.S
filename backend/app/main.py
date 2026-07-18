@@ -67,6 +67,7 @@ app.include_router(timeline.router, prefix=f"{settings.API_V1_STR}", tags=["time
 app.include_router(hud.router, prefix=f"{settings.API_V1_STR}/hud", tags=["hud"])
 app.include_router(explain.router, prefix=f"{settings.API_V1_STR}", tags=["explain"])
 app.include_router(agent.router, prefix=f"{settings.API_V1_STR}", tags=["agent"])
+app.include_router(dashboard.router, prefix=f"{settings.API_V1_STR}/dashboard", tags=["dashboard"])
 
 @app.get("/")
 def root():
