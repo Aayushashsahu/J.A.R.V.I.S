@@ -12,7 +12,7 @@ from app.agents.service import (
 logger = logging.getLogger(__name__)
 
 def retrieve_rag_documents(workspace_id: str, query: str) -> List[Dict[str, Any]]:
-    """Retrieve safety documents matching the query using vector embeddings search."""
+    """Retrieve safety documents matching the query using the central retriever."""
     results = []
     
     # Skip real RAG if no valid Gemini API key is configured (avoids hanging on retries with mock key)
@@ -24,21 +24,21 @@ def retrieve_rag_documents(workspace_id: str, query: str) -> List[Dict[str, Any]
     try:
         from app.services.retriever import retriever
         
-        chunk_results = retriever.retrieve(
+        # Call the existing RAG/chat retriever
+        chunks = retriever.retrieve(
             query=query,
             workspace_id=workspace_id,
             top_k=5
         )
 
-        if chunk_results:
-            for chunk in chunk_results:
-                results.append({
-                    "source": chunk.source,
-                    "content": chunk.text,
-                    "confidence": chunk.score
-                })
+        for chunk in chunks:
+            results.append({
+                "source": chunk.source,
+                "content": chunk.text,
+                "confidence": chunk.score
+            })
     except Exception as e:
-        logger.warning(f"RAG Qdrant retrieval failed: {e}. Falling back to default mock data.")
+        logger.warning(f"RAG central retrieval failed: {e}. Falling back to default mock data.")
     
     # If no results were retrieved, fallback to deterministic mock chunks so the endpoint works
     if not results:
