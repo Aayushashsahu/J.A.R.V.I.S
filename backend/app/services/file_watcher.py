@@ -1,6 +1,6 @@
 import os
 import logging
-from watchdog.observers.polling import PollingObserver as Observer
+from watchdog.observers.polling import PollingObserver
 from watchdog.events import FileSystemEventHandler
 from app.db.session import SessionLocal
 from app.db.models import QueuedTask
@@ -55,7 +55,7 @@ def start_watcher():
         os.makedirs(vault_path, exist_ok=True)
     
     event_handler = VaultEventHandler()
-    observer = Observer()
+    observer = PollingObserver()
     observer.schedule(event_handler, vault_path, recursive=True)
     observer.start()
     logger.info("Vault Watcher Started")
