@@ -1,1 +1,4 @@
-# Integration test package for J.A.R.V.I.S. RAG + Vector Lead sprint.
+# Integration test package
+
+import os
+os.environ["JWT_SECRET_KEY"] = "test_secret"
