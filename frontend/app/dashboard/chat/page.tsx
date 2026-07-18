@@ -69,6 +69,80 @@ function useChatLogic(workspaceId: string | null) {
     return () => window.removeEventListener('focus-chat-input', handleFocusEvent);
   }, []);
 
+  const executeRagMode = async (userMessage: string, wsId: string, token: string | null, apiBase: string) => {
+    try {
+      const res = await fetch(`${apiBase}/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          workspace_id: wsId,
+          top_k: topK,
+          use_hybrid: useHybrid
+        })
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Chat API error ${res.status}: ${errText}`);
+      }
+
+      const data = await res.json();
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: data.message || data.response || 'No response',
+        citations: data.citations || [],
+        mode: 'rag'
+      }]);
+    } catch (err: any) {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: `Error: ${err.message}`,
+        mode: 'rag'
+      }]);
+    }
+  };
+
+  const executeAgentMode = async (userMessage: string, wsId: string, token: string | null, apiBase: string) => {
+    try {
+      const res = await fetch(`${apiBase}/agent/orchestrate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          workspace_id: wsId,
+          goal: userMessage,
+          max_steps: 5
+        })
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Agent API error ${res.status}: ${errText}`);
+      }
+
+      const data = await res.json();
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: data.final_answer || data.message || 'Agent completed',
+        citations: data.citations || [],
+        mode: 'agent',
+        steps: data.steps || []
+      }]);
+    } catch (err: any) {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: `Error: ${err.message}`,
+        mode: 'agent'
+      }]);
+    }
+  };
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !workspaceId) return;
@@ -93,6 +167,8 @@ function useChatLogic(workspaceId: string | null) {
     } else {
       await executeRagMode(userMessage, workspaceId, token, API_URL);
     }
+
+    setIsLoading(false);
   };
 
   const handleSuggestedClick = (text: string) => {
