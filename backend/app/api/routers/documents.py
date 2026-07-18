@@ -1,4 +1,5 @@
 import os
+import anyio
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from sqlalchemy.orm import Session
 from app.api import deps
@@ -32,8 +33,8 @@ async def upload_document(
     
     # Save file locally
     file_path = os.path.join(UPLOAD_DIR, file.filename)
-    with open(file_path, "wb") as f:
-        f.write(content)
+    async with await anyio.open_file(file_path, "wb") as f:
+        await f.write(content)
 
     # Save to DB
     ext = file.filename.split('.')[-1].lower()
