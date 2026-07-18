@@ -51,7 +51,7 @@ class BaseLLMProvider(ABC):
 
         
     @abstractmethod
-    def generate_embeddings(self, texts: List[str]) -> List[List[float]]:
+    def generate_embeddings(self, texts: List[str], input_type: str = "passage") -> List[List[float]]:
         pass
 
 class GeminiProvider(BaseLLMProvider):

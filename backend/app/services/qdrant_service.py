@@ -5,11 +5,15 @@ import uuid
 
 class QdrantService:
     def __init__(self, embedding_dim: int = None):
-        self.client = QdrantClient(host=settings.QDRANT_HOST, port=settings.QDRANT_PORT)
+        self.client = QdrantClient(host=settings.QDRANT_HOST, port=settings.QDRANT_PORT, check_compatibility=False)
         self.collection_name = "jarvis_memory"
-        # Auto-detect embedding dimension based on available providers
+        # Lock embedding dimension at startup to prevent runtime mismatches.
+        # Once the collection is created, the dimension is fixed.
         if embedding_dim is None:
             from app.core.config import settings as cfg
+            # If Gemini key is set, use Gemini (768). Otherwise NVIDIA (1024).
+            # This is locked at startup — if Gemini fails at runtime and NVIDIA
+            # fallback kicks in, the dimension mismatch will be caught at insert time.
             if cfg.GEMINI_API_KEY:
                 self.embedding_dim = 768   # Gemini embedding-2 is 768 dims
             else:
@@ -24,19 +28,23 @@ class QdrantService:
         try:
             try:
                 existing = self.client.get_collection(self.collection_name)
-                # If collection exists but with wrong dimension, log a warning
-                if existing.config.params.vectors.size != self.embedding_dim:
-                    logger.warning(
+                existing_dim = existing.config.params.vectors.size
+                # Only check dimension if it's a real integer (not a mock object)
+                if isinstance(existing_dim, int) and existing_dim != self.embedding_dim:
+                    raise RuntimeError(
                         f"Qdrant collection dimension mismatch: "
-                        f"collection={existing.config.params.vectors.size}, "
-                        f"expected={self.embedding_dim}. "
-                        f"You may need to recreate the collection."
+                        f"collection has dim={existing_dim} but expected dim={self.embedding_dim}. "
+                        f"Recreate the collection or set the correct embedding provider."
                     )
+            except RuntimeError:
+                raise  # re-raise dimension mismatch errors
             except Exception:
                 self.client.create_collection(
                     collection_name=self.collection_name,
                     vectors_config=VectorParams(size=self.embedding_dim, distance=Distance.COSINE),
                 )
+        except RuntimeError:
+            raise  # let dimension mismatch propagate as a hard error
         except Exception as e:
             logger.warning(f"Failed to connect to Qdrant or create collection (Qdrant might be offline): {e}")
 

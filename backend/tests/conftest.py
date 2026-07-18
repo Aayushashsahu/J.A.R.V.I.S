@@ -64,6 +64,21 @@ _patch_gemini = patch(
 )
 _patch_gemini.start()
 
+# --- NVIDIA client mock (prevents real HTTP calls to NVIDIA API) ---
+_nvidia_client_mock = MagicMock()
+_nvidia_embed_result = MagicMock()
+_nvidia_embed_result.data = [MagicMock(index=0, embedding=[0.01] * 1024)]
+_nvidia_client_mock.embeddings.create.return_value = _nvidia_embed_result
+_nvidia_client_mock.chat.completions.create.return_value = MagicMock(
+    choices=[MagicMock(message=MagicMock(content="[MOCK NVIDIA RESPONSE]"))]
+)
+
+_patch_nvidia_client = patch(
+    "openai.OpenAI",
+    return_value=_nvidia_client_mock,
+)
+_patch_nvidia_client.start()
+
 # --- GBrain MCP client mock (prevents real HTTP calls) ---
 _patch_gbrain = patch(
     "app.services.mcp_client.gbrain_client.search",
