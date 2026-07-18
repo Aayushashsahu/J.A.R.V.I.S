@@ -1,0 +1,110 @@
+# =============================================================================
+# J.A.R.V.I.S. — root .gitignore
+# =============================================================================
+
+# --- Environment & secrets ---------------------------------------------------
+# Real .env MUST NEVER be committed. .env.example / .env.template are tracked.
+.env
+.env.*
+!.env.example
+!.env.template
+!.env.*.example
+
+# --- User private data -------------------------------------------------------
+# The vault/ directory holds the operator's personal Obsidian vault (private
+# notes, College, Inbox, Personal etc.). Do NOT push — each developer keeps
+# their own copy on disk and points JARVIS_VAULT_PATH at it.
+vault/
+/vault
+
+# --- Embedded / vendored repositories ----------------------------------------
+# gbrain_temp/ is a separate Git clone of an external project (garrytan/gbrain).
+# It carries its own .git and would conflict if pushed in-tree. Re-clone per
+# developer if needed (see README).
+gbrain_temp/
+
+# Any nested .git/ (frontend, gbrain_temp) must never end up tracked.
+**/.git/
+**/.git
+
+# --- Python ------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+
+# --- Node / Next.js ----------------------------------------------------------
+node_modules/
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+
+# --- Bun ---------------------------------------------------------------------
+*.bun-build
+.bun/
+
+# --- IDE / editor ------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# --- Logs --------------------------------------------------------------------
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- Local artifacts ---------------------------------------------------------
+# User uploads are runtime data, not source.
+backend/uploads/
+uploads/
+
+# Embedded SQLite DBs and Alembic scratch
+*.db
+*.sqlite
+*.sqlite3
+alembic/__pycache__/
+
+# --- Generated / cache -------------------------------------------------------
+.cache/
+.turbo/
+.parcel-cache/
+
+# Edge headless scratch used by build_*.py scripts to render SVG -> PNG.
+docs/architecture/_render.html
+
+# --- Coverage / test artifacts -----------------------------------------------
+coverage/
+test-results/
+playwright-report/
+.playwright/
+
+# --- Worktrees (Claude Code splits work into worktree dirs) ------------------
+.worktrees/
+
+# --- Claude Code agent scratch (memory, hooks, transient) --------------------
+.claude/
+backend/venv/
