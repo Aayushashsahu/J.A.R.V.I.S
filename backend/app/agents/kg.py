@@ -2,7 +2,7 @@ import networkx as nx
 from sqlalchemy.orm import Session
 import re
 from typing import List, Dict, Any
-import itertools
+from itertools import combinations
 
 class KnowledgeGraphManager:
     def __init__(self):
@@ -68,7 +68,7 @@ class KnowledgeGraphManager:
         all_new_entities = list(set(goal_entities + source_entities))
         
         # Connect everything in this run
-        for u, v in itertools.combinations(all_new_entities, 2):
+        for u, v in combinations(all_new_entities, 2):
             if self.graph.has_edge(u, v):
                 # Increment weight slightly up to max of 1.0
                 current_w = self.graph[u][v].get('weight', 0.5)
@@ -83,7 +83,7 @@ class KnowledgeGraphManager:
             docs = db.query(Document).all()
             for doc in docs:
                 terms = self.extract_entities_from_text(doc.filename)
-                for u, v in itertools.combinations(terms, 2):
+                for u, v in combinations(terms, 2):
                     if self.graph.has_edge(u, v):
                         self.graph[u][v]['weight'] = min(1.0, self.graph[u][v]['weight'] + 0.02)
                     else:
