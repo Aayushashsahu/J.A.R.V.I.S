@@ -168,8 +168,75 @@ def process_markdown_task(db: Session, task: QueuedTask):
         try:
             data = _extract_entities_via_llm(parsed['content'])
             
-            _process_pkm_entities(db, task.user_id, data.get("pkm_entities", []), filename)
-            _process_general_entities(db, task.user_id, data.get("entities", []))
+            # Pre-fetch existing PKM Entities to avoid N+1 queries
+            pkm_entities_data = data.get("pkm_entities", [])
+            unique_pkm_values = {p.get("value", "").strip().lower() for p in pkm_entities_data if p.get("value", "").strip()}
+
+            pkm_dict = {}
+            if unique_pkm_values:
+                existing_pkms = db.query(PKMEntity).filter(
+                    PKMEntity.user_id == task.user_id,
+                    func.lower(func.trim(PKMEntity.value)).in_(unique_pkm_values)
+                ).all()
+                pkm_dict = {p.value.strip().lower(): p for p in existing_pkms if p.value}
+
+            for pkm in pkm_entities_data:
+                value = pkm.get("value", "").strip()
+                if not value: continue
+                # Deduplication
+                value_clean = value.lower()
+                existing = pkm_dict.get(value_clean)
+
+                if existing:
+                    existing.confidence = min(100, existing.confidence + 5) # Aggregate confidence
+                else:
+                    new_pkm = PKMEntity(
+                        user_id=task.user_id,
+                        category=pkm.get("category", "Interest"),
+                        value=value,
+                        confidence=pkm.get("confidence", 50),
+                        source_file=filename,
+                        evidence_type="structured_memory",
+                        priority=2
+                    )
+                    db.add(new_pkm)
+                    db.flush() # Flush to get ID without committing transaction
+                    # Graph Node
+                    db.add(KnowledgeGraphNode(user_id=task.user_id, node_type="PKMEntity", node_id=new_pkm.id))
+                    # Add to dictionary so we don't recreate it if there are duplicates in this same payload
+                    pkm_dict[value_clean] = new_pkm
+                
+            # Pre-fetch existing Entities to avoid N+1 queries
+            entities_data = data.get("entities", [])
+            unique_ent_names = {e.get("name", "").strip().lower() for e in entities_data if e.get("name", "").strip()}
+
+            ent_dict = {}
+            if unique_ent_names:
+                existing_ents = db.query(Entity).filter(
+                    Entity.user_id == task.user_id,
+                    func.lower(func.trim(Entity.name)).in_(unique_ent_names)
+                ).all()
+                ent_dict = {e.name.strip().lower(): e for e in existing_ents if e.name}
+
+            for ent in entities_data:
+                name = ent.get("name", "").strip()
+                if not name: continue
+                # Deduplication
+                name_clean = name.lower()
+                existing = ent_dict.get(name_clean)
+
+                if not existing:
+                    new_ent = Entity(
+                        user_id=task.user_id,
+                        type=ent.get("type", "Concept"),
+                        name=name
+                    )
+                    db.add(new_ent)
+                    db.flush() # Flush to get ID without committing transaction
+                    # Graph Node
+                    db.add(KnowledgeGraphNode(user_id=task.user_id, node_type="Entity", node_id=new_ent.id))
+                    # Add to dictionary so we don't recreate it if there are duplicates in this same payload
+                    ent_dict[name_clean] = new_ent
                 
             db.commit()
             
