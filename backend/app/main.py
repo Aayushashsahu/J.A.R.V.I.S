@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.config import settings
-from app.db.session import engine, Base
 from app.api.routers import auth, workspaces, documents, chat, brain, timeline, hud, explain, agent
 from app.services.file_watcher import start_watcher
 from app.services.batch_processor import run_batch_processor
@@ -22,7 +21,6 @@ async def lifespan(app: FastAPI):
     # Auto-create tables on startup (robust fallback for local execution / SQLite)
     try:
         from app.db.session import engine, Base
-        from app.db import models
         Base.metadata.create_all(bind=engine)
         logging.info("Database tables initialized successfully.")
     except Exception as db_err:
@@ -54,7 +52,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In production, restrict this
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

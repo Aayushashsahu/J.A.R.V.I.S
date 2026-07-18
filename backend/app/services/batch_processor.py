@@ -1,4 +1,3 @@
-import time
 import json
 import logging
 import os
@@ -31,6 +30,125 @@ def get_workspace_for_path(db: Session, user_id: str, file_path: str) -> str:
         db.refresh(workspace)
     return workspace.id
 
+def _get_or_create_document(db: Session, user_id: str, workspace_id: str, filename: str, file_path: str) -> Document:
+    doc = db.query(Document).filter(Document.file_path == file_path).first()
+    if not doc:
+        doc = Document(
+            user_id=user_id,
+            workspace_id=workspace_id,
+            filename=filename,
+            content_type="md",
+            file_path=file_path
+        )
+        db.add(doc)
+        db.commit()
+    return doc
+
+def _extract_entities_via_llm(content: str) -> dict:
+    prompt = f"""
+    Extract key PKM Entities (Goals, Projects, Interests) and General Entities (People, Companies, Technologies) from the following text.
+    Also, provide a smart organization suggestion if this document belongs in a specific workspace based on the entities found.
+    Return ONLY valid JSON in this format:
+    {{
+        "pkm_entities": [ {{"category": "Goal", "value": "Launch product", "confidence": 90}} ],
+        "entities": [ {{"type": "Person", "name": "Alice"}} ],
+        "organization_suggestion": {{
+            "suggested_workspace": "Startups",
+            "confidence": 92,
+            "evidence": ["Mentioned 12 times", "Related to product"]
+        }}
+    }}
+    Text:
+    {content}
+    """
+    response = llm_provider.generate_text(prompt, "You are an AI extracting structured data.")
+    clean_resp = response.replace("```json", "").replace("```", "").strip()
+    return json.loads(clean_resp)
+
+def _process_pkm_entities(db: Session, user_id: str, pkm_entities_data: list, filename: str):
+    for pkm in pkm_entities_data:
+        value = pkm.get("value", "").strip()
+        if not value: continue
+        # Deduplication
+        value_clean = value.strip().lower()
+        existing = db.query(PKMEntity).filter(
+            PKMEntity.user_id == user_id,
+            func.lower(func.trim(PKMEntity.value)) == value_clean
+        ).first()
+        if existing:
+            existing.confidence = min(100, existing.confidence + 5) # Aggregate confidence
+            db.commit()
+        else:
+            new_pkm = PKMEntity(
+                user_id=user_id,
+                category=pkm.get("category", "Interest"),
+                value=value,
+                confidence=pkm.get("confidence", 50),
+                source_file=filename,
+                evidence_type="structured_memory",
+                priority=2
+            )
+            db.add(new_pkm)
+            db.commit()
+            db.refresh(new_pkm)
+            # Graph Node
+            db.add(KnowledgeGraphNode(user_id=user_id, node_type="PKMEntity", node_id=new_pkm.id))
+
+def _process_general_entities(db: Session, user_id: str, entities_data: list):
+    for ent in entities_data:
+        name = ent.get("name", "").strip()
+        if not name: continue
+        # Deduplication
+        name_clean = name.strip().lower()
+        existing = db.query(Entity).filter(
+            Entity.user_id == user_id,
+            func.lower(func.trim(Entity.name)) == name_clean
+        ).first()
+        if not existing:
+            new_ent = Entity(
+                user_id=user_id,
+                type=ent.get("type", "Concept"),
+                name=name
+            )
+            db.add(new_ent)
+            db.commit()
+            db.refresh(new_ent)
+            # Graph Node
+            db.add(KnowledgeGraphNode(user_id=user_id, node_type="Entity", node_id=new_ent.id))
+
+def _generate_organization_suggestion(db: Session, user_id: str, doc_id: str, filename: str, sug_data: dict):
+    if sug_data and sug_data.get("suggested_workspace"):
+        evidence = sug_data.get("evidence", [])
+        conf = sug_data.get("confidence", 80)
+        ws = sug_data.get("suggested_workspace")
+        suggestion_content = json.dumps({
+            "filename": filename,
+            "suggested_workspace": ws,
+            "evidence": evidence
+        })
+        db.add(Suggestion(user_id=user_id, target_id=doc_id, suggestion_type="move_workspace", content=suggestion_content, confidence=conf, status="pending"))
+
+def _create_memory_timeline_event(db: Session, user_id: str, workspace_id: str, action: str, filename: str, data: dict):
+    from app.db.models import MemoryTimelineEvent
+    timeline_event = MemoryTimelineEvent(
+        user_id=user_id,
+        workspace_id=workspace_id,
+        event_type="modification" if action == "modified" else "creation",
+        content=f"Document '{filename}' was processed. Extracted {len(data.get('pkm_entities', []))} PKMs and {len(data.get('entities', []))} entities."
+    )
+    db.add(timeline_event)
+    db.commit()
+
+def _trigger_reflection_engine(db: Session, user_id: str, workspace_id: str, filename: str, doc_id: str):
+    refl_payload = {
+        "workspace_id": workspace_id,
+        "source_file": filename,
+        "document_id": doc_id
+    }
+    refl_task = QueuedTask(user_id=user_id, task_type="generate_reflection", payload=json.dumps(refl_payload), status="pending")
+    db.add(refl_task)
+    db.commit()
+
 def process_markdown_task(db: Session, task: QueuedTask):
     payload = json.loads(task.payload)
     file_path = payload.get("file_path")
@@ -45,51 +163,34 @@ def process_markdown_task(db: Session, task: QueuedTask):
         workspace_id = get_workspace_for_path(db, task.user_id, file_path)
 
         filename = os.path.basename(file_path)
-        doc = db.query(Document).filter(Document.file_path == file_path).first()
-        if not doc:
-            doc = Document(
-                user_id=task.user_id,
-                workspace_id=workspace_id,
-                filename=filename,
-                content_type="md",
-                file_path=file_path
-            )
-            db.add(doc)
-            db.commit()
+        doc = _get_or_create_document(db, task.user_id, workspace_id, filename, file_path)
 
-        prompt = f"""
-        Extract key PKM Entities (Goals, Projects, Interests) and General Entities (People, Companies, Technologies) from the following text.
-        Also, provide a smart organization suggestion if this document belongs in a specific workspace based on the entities found.
-        Return ONLY valid JSON in this format:
-        {{
-            "pkm_entities": [ {{"category": "Goal", "value": "Launch product", "confidence": 90}} ],
-            "entities": [ {{"type": "Person", "name": "Alice"}} ],
-            "organization_suggestion": {{
-                "suggested_workspace": "Startups",
-                "confidence": 92,
-                "evidence": ["Mentioned 12 times", "Related to product"]
-            }}
-        }}
-        Text:
-        {parsed['content']}
-        """
-        response = llm_provider.generate_text(prompt, "You are an AI extracting structured data.")
         try:
-            clean_resp = response.replace("```json", "").replace("```", "").strip()
-            data = json.loads(clean_resp)
+            data = _extract_entities_via_llm(parsed['content'])
             
+            # Batch PKM Entities lookup
+            pkm_values = [pkm.get("value", "").strip() for pkm in data.get("pkm_entities", []) if pkm.get("value", "").strip()]
+            pkm_values_clean = [v.lower() for v in pkm_values]
+
+            existing_pkms = {}
+            if pkm_values_clean:
+                existing_pkm_query = db.query(PKMEntity).filter(
+                    PKMEntity.user_id == task.user_id,
+                    func.lower(func.trim(PKMEntity.value)).in_(pkm_values_clean)
+                ).all()
+                existing_pkms = {pkm.value.strip().lower(): pkm for pkm in existing_pkm_query}
+
+            new_pkms_to_add = []
+            new_kg_nodes_to_add = []
+
             for pkm in data.get("pkm_entities", []):
                 value = pkm.get("value", "").strip()
                 if not value: continue
-                # Deduplication
-                value_clean = value.strip().lower()
-                existing = db.query(PKMEntity).filter(
-                    PKMEntity.user_id == task.user_id, 
-                    func.lower(func.trim(PKMEntity.value)) == value_clean
-                ).first()
+                value_clean = value.lower()
+
+                existing = existing_pkms.get(value_clean)
                 if existing:
-                    existing.confidence = min(100, existing.confidence + 5) # Aggregate confidence
-                    db.commit()
+                    existing.confidence = min(100, existing.confidence + 5)
                 else:
                     new_pkm = PKMEntity(
                         user_id=task.user_id,
@@ -101,32 +202,53 @@ def process_markdown_task(db: Session, task: QueuedTask):
                         priority=2
                     )
                     db.add(new_pkm)
-                    db.commit()
-                    db.refresh(new_pkm)
-                    # Graph Node
-                    db.add(KnowledgeGraphNode(user_id=task.user_id, node_type="PKMEntity", node_id=new_pkm.id))
-                
+                    new_pkms_to_add.append(new_pkm)
+                    existing_pkms[value_clean] = new_pkm
+                    # Note: we need the ID for KnowledgeGraphNode. We can flush the session to get IDs.
+
+            db.flush() # get IDs for new PKMs
+
+            for new_pkm in new_pkms_to_add:
+                new_kg_nodes_to_add.append(KnowledgeGraphNode(user_id=task.user_id, node_type="PKMEntity", node_id=new_pkm.id))
+
+            # Batch Entities lookup
+            ent_names = [ent.get("name", "").strip() for ent in data.get("entities", []) if ent.get("name", "").strip()]
+            ent_names_clean = [n.lower() for n in ent_names]
+
+            existing_ents = {}
+            if ent_names_clean:
+                existing_ent_query = db.query(Entity).filter(
+                    Entity.user_id == task.user_id,
+                    func.lower(func.trim(Entity.name)).in_(ent_names_clean)
+                ).all()
+                existing_ents = {ent.name.strip().lower(): ent for ent in existing_ent_query}
+
+            new_ents_to_add = []
+
             for ent in data.get("entities", []):
                 name = ent.get("name", "").strip()
                 if not name: continue
-                # Deduplication
-                name_clean = name.strip().lower()
-                existing = db.query(Entity).filter(
-                    Entity.user_id == task.user_id, 
-                    func.lower(func.trim(Entity.name)) == name_clean
-                ).first()
-                if not existing:
+                name_clean = name.lower()
+
+                if name_clean not in existing_ents:
                     new_ent = Entity(
                         user_id=task.user_id,
                         type=ent.get("type", "Concept"),
                         name=name
                     )
                     db.add(new_ent)
-                    db.commit()
-                    db.refresh(new_ent)
-                    # Graph Node
-                    db.add(KnowledgeGraphNode(user_id=task.user_id, node_type="Entity", node_id=new_ent.id))
-                
+                    new_ents_to_add.append(new_ent)
+                    # We add to existing_ents to avoid inserting duplicate names from the same batch
+                    existing_ents[name_clean] = new_ent
+
+            db.flush() # get IDs for new Entities
+
+            for new_ent in new_ents_to_add:
+                new_kg_nodes_to_add.append(KnowledgeGraphNode(user_id=task.user_id, node_type="Entity", node_id=new_ent.id))
+
+            for kg_node in new_kg_nodes_to_add:
+                db.add(kg_node)
+
             db.commit()
             
             # Embed into Qdrant for Retrieval
@@ -140,42 +262,9 @@ def process_markdown_task(db: Session, task: QueuedTask):
             except Exception as eq:
                 logger.error(f"Qdrant insertion failed: {eq}")
 
-            # Generate Suggestion (Smart Organization)
-            sug_data = data.get("organization_suggestion")
-            if sug_data and sug_data.get("suggested_workspace"):
-                evidence = sug_data.get("evidence", [])
-                conf = sug_data.get("confidence", 80)
-                ws = sug_data.get("suggested_workspace")
-                suggestion_content = json.dumps({
-                    "filename": filename,
-                    "suggested_workspace": ws,
-                    "evidence": evidence
-                })
-                db.add(Suggestion(user_id=task.user_id, target_id=doc.id, suggestion_type="move_workspace", content=suggestion_content, confidence=conf, status="pending"))
-
-            # Memory Timeline Event
-            from app.db.models import MemoryTimelineEvent
-            timeline_event = MemoryTimelineEvent(
-                user_id=task.user_id,
-                workspace_id=workspace_id,
-                event_type="modification" if action == "modified" else "creation",
-                content=f"Document '{filename}' was processed. Extracted {len(data.get('pkm_entities', []))} PKMs and {len(data.get('entities', []))} entities."
-            )
-            db.add(timeline_event)
-            db.commit()
-
-
-            
-            # Trigger Reflection Engine
-            refl_payload = {
-                "workspace_id": workspace_id,
-                "source_file": filename,
-                "document_id": doc.id
-            }
-            refl_task = QueuedTask(user_id=task.user_id, task_type="generate_reflection", payload=json.dumps(refl_payload), status="pending")
-            db.add(refl_task)
-            db.commit()
-
+            _generate_organization_suggestion(db, task.user_id, doc.id, filename, data.get("organization_suggestion"))
+            _create_memory_timeline_event(db, task.user_id, workspace_id, action, filename, data)
+            _trigger_reflection_engine(db, task.user_id, workspace_id, filename, doc.id)
             
         except Exception as e:
             logger.error(f"Failed to parse LLM JSON: {e}")
