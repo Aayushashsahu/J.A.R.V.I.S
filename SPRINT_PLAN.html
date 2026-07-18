@@ -1,0 +1,428 @@
+<!doctype html><html lang='en'><head><meta charset='utf-8'><title>J.A.R.V.I.S Sprint Plan</title><style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.55;color:#1a1a1a;max-width:880px;margin:32px auto;padding:0 24px 80px;background:#fff}h1{font-size:1.9rem;border-bottom:3px solid #0f172a;padding-bottom:8px;margin-top:1.6em}h2{font-size:1.45rem;border-bottom:1px solid #e5e7eb;padding-bottom:4px;margin-top:2em;color:#0f172a}h3{font-size:1.2rem;margin-top:1.6em;color:#1f2937}h4{font-size:1.05rem;margin-top:1.4em;color:#1f2937}blockquote{border-left:4px solid #2563eb;background:#eff6ff;margin:1em 0;padding:10px 16px;color:#1e3a8a}table{border-collapse:collapse;width:100%;margin:1em 0;font-size:0.92rem}th,td{border:1px solid #d1d5db;padding:8px 12px;text-align:left;vertical-align:top}th{background:#f9fafb}tr:nth-child(even)td{background:#f3f4f6}code{background:#f3f4f6;padding:2px 6px;border-radius:4px;font-size:0.9em}pre{background:#0f172a;color:#f1f5f9;padding:16px;border-radius:6px;overflow-x:auto;font-size:0.85rem;line-height:1.45}pre code{background:transparent;padding:0;color:inherit}ul,ol{padding-left:1.5em}li{margin:4px 0}hr{border:0;border-top:1px solid #e5e7eb;margin:2em 0}</style></head><body><h1 id="jarvis-et-ai-hackathon-2026-sprint-plan">J.A.R.V.I.S — ET AI Hackathon 2026 Sprint Plan</h1>
+<blockquote>
+<p><strong>Hackathon:</strong> ET AI Hackathon 2026 — Problem #8 (Industrial Knowledge Intelligence)
+<strong>Repo (sanitized):</strong> https://github.com/Aayushashsahu/J.A.R.V.I.S.git
+<strong>Working folder:</strong> <code>C:\J.A.R.V.I.S (hackthone)\</code>
+<strong>Sprint window:</strong> 30 hours total (planned for a 2-day burst; aim to submit at Hour 30 for early-bird bonus)
+<strong>Goal:</strong> Working Industrial Knowledge Intelligence platform that demos end-to-end on real OISD / Factory Act / BIS / PESO documents with citation-backed answers, agent orchestration, and a graph-of-thought knowledge view.</p>
+</blockquote>
+<hr />
+<h2 id="1-mission-in-one-sentence">1. Mission (in one sentence)</h2>
+<p>Ship a working J.A.R.V.I.S demo that ingests hazardous-process documents, answers inspector-style questions with citations, runs multi-agent research, and visualizes the knowledge graph — and get it submitted with a clean README, deployed link, and architecture diagram.</p>
+<hr />
+<h2 id="2-the-four-roles">2. The Four Roles</h2>
+<table>
+<thead>
+<tr>
+<th>Person</th>
+<th>Role</th>
+<th>Primary Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Aayush</strong></td>
+<td>Architect, Integrator, Pitch Owner</td>
+<td>Repo health, integration, submitting, demo rehearsal</td>
+</tr>
+<tr>
+<td><strong>Navansh</strong></td>
+<td>RAG + Vector Lead</td>
+<td><code>/api/chat</code> real-DB plumbing, hybrid search, embeddings</td>
+</tr>
+<tr>
+<td><strong>Yash</strong></td>
+<td>Agent + Reasoning Lead</td>
+<td><code>/api/agent/orchestrate</code>, multi-agent flow, KG build</td>
+</tr>
+<tr>
+<td><strong>Nirupam Pal</strong></td>
+<td>Frontend + UX Lead</td>
+<td>Dashboard, query UI, graph viz, citations panel</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>The original JARVIS code (Aayush's personal work) is preserved separately at <code>C:\J.A.R.V.I.S.zip</code>. Any rewrite happens in <code>C:\J.A.R.V.I.S (hackthone)\</code> only.</p>
+</blockquote>
+<hr />
+<h2 id="3-aayush-architect-integrator-pitch-owner">3. Aayush — Architect, Integrator, Pitch Owner</h2>
+<p><strong>Mission:</strong> <em>Protect the existing codebase, integrate teammates' modules, ensure the demo works, and deliver submission.</em></p>
+<p>This is the role definition you asked for. Below is the hour-by-hour table you specified, locked.</p>
+<h3 id="aayushs-hour-by-hour-deliverables">Aayush's hour-by-hour deliverables</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">Hour</th>
+<th>What must be done</th>
+<th>Visible output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;"><strong>0–1</strong></td>
+<td>Create branches</td>
+<td><code>main</code> protected; <code>feat/navansh-rag</code>, <code>feat/yash-agents</code>, <code>feat/nirupam-ui</code>, <code>feat/aayush-infra</code> all pushed; branch protection set (no force-push to <code>main</code>).</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>1–2</strong></td>
+<td>Write <code>CONTRACTS.md</code>, <code>README.md</code>, <code>DEMO_SCRIPT.md</code></td>
+<td>All three committed to <code>main</code>. CONTRACTS.md freezes the public API shapes for the next 26 hours.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>2–4</strong></td>
+<td>Smoke-test the stack, wire first endpoints</td>
+<td><code>docker compose up</code> brings up Postgres + Qdrant + Redis + backend + frontend with zero errors; <code>/api/chat</code> returns at least one canned response; <code>/api/agent/orchestrate</code> returns 200 on a stub.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>4–8</strong></td>
+<td>Standby, unblock, review contract compliance</td>
+<td>Sit in the group DM. PR-by-PR review only — no code writing unless Navansh/Yash/Nirupam are blocked on infra. Pin a checklist of frozen contracts.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>8–14</strong></td>
+<td>First end-to-end integration</td>
+<td>Three teammates' branches merged behind feature flags; <code>/api/chat</code> + <code>/api/agent/orchestrate</code> + dashboard query all run on the <em>same</em> dataset.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>14–18</strong></td>
+<td>Architecture diagram + docs</td>
+<td>Draw.io → PNG of full system (Ingest → Embed → Qdrant → Retriever → LLM → Frontend); embed in README. C4-style diagram for the architecture section.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>18–22</strong></td>
+<td>Integration testing, merge branches</td>
+<td>All feature flags off; one final integration push to <code>main</code>; smoke-test all four primary demo flows in production config.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>22–24</strong></td>
+<td>Full demo rehearsal</td>
+<td>Walk through <code>DEMO_SCRIPT.md</code> end-to-end twice. Time it. Identify the failure point. Fix immediately.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>24–28</strong></td>
+<td>Final polish (README, arch diagram, screenshots)</td>
+<td>Polished README with logo, demo GIF, architecture, install, env table, ethics note, team credits. Five screenshots.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>28–30</strong></td>
+<td>Final rehearsal + submit</td>
+<td>One last dry run. Submit the repository and deployment link. Hand off the next-sprint task list to Navansh (so Aayush is free post-submission).</td>
+</tr>
+</tbody>
+</table>
+<h3 id="aayush-owns-assigned-into-everyones-path">Aayush owns (assigned into everyone's path)</h3>
+<ul>
+<li>Repo health, <code>.env.example</code>, secrets, <code>.gitignore</code>.</li>
+<li><code>docker-compose.yml</code> and the <code>gbrain</code> service config.</li>
+<li><code>gbrain init --pglite --no-embedding</code> initialization step (documented).</li>
+<li><code>feedback/kg-builder</code> glue code (Yash writes the agent; Aayush wires the NetworkX store into the backend startup).</li>
+<li>Submission ZIP and the public GitHub link.</li>
+<li>The 60-second pitch script (3 bullets + 1 close).</li>
+</ul>
+<h3 id="aayushs-pre-flight-checks-hour-0">Aayush's pre-flight checks (Hour 0)</h3>
+<ol>
+<li>Confirm the working folder is <code>C:\J.A.R.V.I.S (hackthone)\</code> — <em>not</em> the personal JARVIS copy.</li>
+<li><code>git status</code> is clean. Origin points to <code>https://github.com/Aayushashsahu/J.A.R.V.I.S.git</code>.</li>
+<li><code>.env.example</code> has <em>no</em> live keys — placeholders only.</li>
+<li>Docker Desktop is running and has at least 8 GB RAM allocated.</li>
+</ol>
+<hr />
+<h2 id="4-navansh-rag-vector-lead">4. Navansh — RAG + Vector Lead</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">Hour</th>
+<th>Deliverable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;"><strong>0–1</strong></td>
+<td>Read CONTRACTS.md; comment any blockers in group chat. Clone repo locally, set up <code>.env</code>.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>2–4</strong></td>
+<td>Pull existing <code>app/services/retriever.py</code> and <code>app/services/embedding_service.py</code> into shape. Confirm Qdrant collection schema: 768-dim vectors, payload {<code>source</code>, <code>page</code>, <code>clause_id</code>, <code>text</code>}.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>4–8</strong></td>
+<td>Hybrid search: BM25 over Postgres <code>documents</code> table + cosine over Qdrant. Reciprocal rank fusion. Must add <code>POST /api/ingest/upload</code> to accept a folder of OISD PDF docs.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>8–14</strong></td>
+<td>Wire <code>/api/chat</code> to use the hybrid retriever + the response format promised in CONTRACTS.md (answer, citations[], chunk_ids[]). Stream tokens.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>14–18</strong></td>
+<td>Cache embeddings in Postgres with a content-hash key. Add <code>/api/ingest/status/{job_id}</code> polling endpoint.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>18–22</strong></td>
+<td>Submit a clean PR to <code>feat/navansh-rag</code>. Run the smoke tests from <code>tests/integration/test_chat.py</code>.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>22–28</strong></td>
+<td>Standby for question / answer hardening. No new features — only edge-case catches.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>28–30</strong></td>
+<td>Rehearse five demo questions with Aayush. Take one answer for the README screenshot.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Critical handoff:</strong> the <code>/api/ingest/upload</code> endpoint must accept any file path the frontend can supply; the response shape is fixed in CONTRACTS.md as <code>{job_id, accepted, total}</code>.</p>
+<hr />
+<h2 id="5-yash-agent-reasoning-lead">5. Yash — Agent + Reasoning Lead</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">Hour</th>
+<th>Deliverable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;"><strong>0–1</strong></td>
+<td>Read CONTRACTS.md. Branch <code>feat/yash-agents</code> already exists. Pick a single-agent framework (LangGraph) and pin the version in <code>requirements.txt</code>.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>2–4</strong></td>
+<td>Stub <code>/api/agent/orchestrate</code> returns canned JSON for the contract shape.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>4–8</strong></td>
+<td>Implement a <em>single</em>-agent pipeline: question → planner → retriever (calls Navansh's RAG) → verifier → formatter. Use NVIDIA NIM (Llama 3.1 70B) as primary LLM; Gemini as fallback if NV key missing.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>8–14</strong></td>
+<td>Multi-agent: add a "researcher" sub-agent that fans out 3 sub-questions and synthesises. Persist agent runs to the <code>agent_runs</code> table with full trace JSON.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>14–18</strong></td>
+<td>Build the knowledge graph: NetworkX in-process, but expose <code>/api/kg/neighbors/{entity}</code> returning <code>{source, target, weight}[]</code>.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>18–22</strong></td>
+<td>Frontend integration: <code>/api/agent/stream</code> — server-sent events for live token streaming.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>22–28</strong></td>
+<td>Hardening: input validation (LangGraph state guard), timeout 60s on every agent run, cost-aware model selection.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>28–30</strong></td>
+<td>Rehearse the multi-agent demo. README "How the agent thinks" section.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Critical handoff:</strong> the <code>/api/agent/orchestrate</code> request/response JSON is fixed in CONTRACTS.md. Do not change fields mid-sprint without a call to Aayush.</p>
+<hr />
+<h2 id="6-nirupam-pal-frontend-ux-lead">6. Nirupam Pal — Frontend + UX Lead</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">Hour</th>
+<th>Deliverable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;"><strong>0–1</strong></td>
+<td>Read CONTRACTS.md. Check out <code>feat/nirupam-ui</code>. Run <code>npm install</code> and confirm dev server boots on :3000.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>2–4</strong></td>
+<td>Skeleton dashboard: query box (left), answer pane with citations (right), file-upload panel (bottom). No styling perfection yet — just layout.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>4–8</strong></td>
+<td>Wire <code>&lt;QueryBox /&gt;</code> to <code>POST /api/chat</code>. Render citations as clickable chips. Each chip scrolls the source-document viewer.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>8–14</strong></td>
+<td>Add <code>/admin/ingest</code> page: drop-zone for PDFs, live progress bar polling <code>/api/ingest/status/{job_id}</code>.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>14–18</strong></td>
+<td>Add knowledge-graph viewer: a small canvas with circles (entities) and lines (relations). Click a node → cite one source. Use <code>react-force-graph-2d</code> or a lighter lib (no heavy D3).</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>18–22</strong></td>
+<td>"Reasoning trace" panel: shows the live agent SSE stream — planner → retriever → verifier → final.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>22–28</strong></td>
+<td>Polish: dark mode, mobile-friendly, keyboard shortcut for "ask". Add a "Reset demo" button. Bump Lighthouse score.</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>28–30</strong></td>
+<td>Screenshot all five flows. Embed in README. Rehearse the demo with Aayush.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Critical handoff:</strong> the frontend never holds secrets. NVIDIA key, Gemini key, JWT, anything sensitive — <em>only</em> in the backend env. Nirupam must pull these from <code>/api/config</code> (debug-only endpoint) if needed for a feature flag.</p>
+<hr />
+<h2 id="7-contractsmd-locked-do-not-change-without-aayushs-approval">7. CONTRACTS.md (locked — do not change without Aayush's approval)</h2>
+<pre><code class="language-jsonc">// POST /api/chat
+// Request:
+{
+  &quot;workspace_id&quot;: &quot;demo&quot;,
+  &quot;question&quot;: &quot;What is the minimum clearance for hydrocarbon storage under OISD-118?&quot;,
+  &quot;filters&quot;: { &quot;clause&quot;: null, &quot;source&quot;: null },
+  &quot;top_k&quot;: 6
+}
+
+// Response (streamed via NDJSON, one line per event):
+{&quot;type&quot;:&quot;token&quot;, &quot;delta&quot;:&quot;...&quot;}
+{&quot;type&quot;:&quot;citation&quot;, &quot;chunk_id&quot;:&quot;oisd118_p12_c42&quot;, &quot;source&quot;:&quot;OISD-118.pdf&quot;, &quot;page&quot;:12, &quot;clause&quot;:&quot;3.4&quot;}
+{&quot;type&quot;:&quot;final&quot;, &quot;answer&quot;:&quot;...&quot;, &quot;citations&quot;:[...], &quot;confidence&quot;:0.83}
+</code></pre>
+<pre><code class="language-jsonc">// POST /api/agent/orchestrate
+// Request:
+{ &quot;workspace_id&quot;:&quot;demo&quot;, &quot;goal&quot;:&quot;Compare OISD-118 vs PESO for LPG storage&quot;, &quot;max_steps&quot;:6 }
+// Response (SSE):
+{&quot;event&quot;:&quot;trace&quot;, &quot;step&quot;:1, &quot;node&quot;:&quot;planner&quot;, &quot;content&quot;:&quot;...&quot;}
+{&quot;event&quot;:&quot;trace&quot;, &quot;step&quot;:2, &quot;node&quot;:&quot;retriever&quot;, &quot;sources&quot;:3}
+{&quot;event&quot;:&quot;final&quot;,   &quot;answer&quot;:&quot;...&quot;, &quot;sources&quot;:[...], &quot;agent_run_id&quot;:&quot;...&quot;}
+</code></pre>
+<pre><code class="language-jsonc">// POST /api/ingest/upload
+// Request: multipart/form-data, field name &quot;files&quot;
+// Response: { &quot;job_id&quot;:&quot;...&quot;, &quot;accepted&quot;:3, &quot;total&quot;:3 }
+// Subsequent: GET /api/ingest/status/{job_id} → { &quot;state&quot;:&quot;processing|done|error&quot;, &quot;progress&quot;:0.42, &quot;errors&quot;:[] }
+</code></pre>
+<pre><code class="language-jsonc">// GET /api/kg/neighbors/{entity}
+// Response: { &quot;entity&quot;:&quot;OISD-118&quot;, &quot;neighbors&quot;:[{&quot;source&quot;:&quot;PESO&quot;,&quot;target&quot;:&quot;OISD-118&quot;,&quot;weight&quot;:0.81}] }
+</code></pre>
+<hr />
+<h2 id="8-communication-rules-read-these-or-lose-time">8. Communication rules (read these or lose time)</h2>
+<ul>
+<li><strong>One group DM only.</strong> No separate chats. Pin: CONTRACTS.md link, sprint table link, demo script link.</li>
+<li><strong>Every PR needs a one-line summary on first line</strong>: <code>[contract] …</code>, <code>[secrets] …</code>, <code>[demo] …</code> — so Aayush can review by tag.</li>
+<li><strong>No midnight surprises.</strong> Any breaking change to a contract needs a heads-up <strong>30 min before</strong> the merge.</li>
+<li><strong>Standups</strong>: every 4 hours, top of the hour. 3 lines max: <em>what I shipped, what's blocking me, what's next</em>.</li>
+<li><strong>Blockers go to Aayush first</strong>, not the group, when they touch infra/secrets/submission.</li>
+</ul>
+<hr />
+<h2 id="9-demo-script-the-60-seconds-that-matter">9. Demo script (the 60 seconds that matter)</h2>
+<ol>
+<li><strong>0–10s</strong>: Drag three industrial PDFs (OISD-118, Factory Act 1948, PESO rules) onto the dashboard. Progress bar fills.</li>
+<li><strong>10–25s</strong>: Type: <em>"What is the minimum setback for LPG bulk storage above 1000 MT?"</em> → answer streams with citations; click the citation chip → source page jumps.</li>
+<li><strong>25–45s</strong>: Switch to <strong>Agent mode</strong>: <em>"Compare OISD-118 and PESO for fire-water reservation."</em> Watch the trace panel: planner → retriever → verifier → final.</li>
+<li><strong>45–55s</strong>: Click an entity (<strong>PESO</strong>) on the knowledge-graph view. Lines light up.</li>
+<li><strong>55–60s</strong>: One sentence close: <em>"Same citations, every time. Auditable by design."</em></li>
+</ol>
+<hr />
+<h2 id="10-risk-register-the-things-that-will-go-wrong">10. Risk register (the things that <em>will</em> go wrong)</h2>
+<table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NVIDIA API key absent / rate-limit</td>
+<td>Fallback path to Gemini already coded in <code>llm_provider.py</code>. Env var drives selection.</td>
+</tr>
+<tr>
+<td>Qdrant memory pressure with 50+ PDFs</td>
+<td>Disable in-memory ANN index if RAM &lt; 6 GB; use quantised vectors.</td>
+</tr>
+<tr>
+<td>NetworkX graph blows past 10k nodes</td>
+<td>Cap <code>max_entities</code> per workspace. Default 2000.</td>
+</tr>
+<tr>
+<td>SSE drops in Safari</td>
+<td>Frontend reverts to polling <code>/api/agent/status/{id}</code> after 5s of no event.</td>
+</tr>
+<tr>
+<td>GitHub Actions docker build OOM during submission</td>
+<td>Pin base image to <code>python:3.11-slim</code>, multi-stage build.</td>
+</tr>
+<tr>
+<td>Teammate offline for 4+ hours</td>
+<td>Aayush picks up the smallest deliverable from that lane; pair-program recovery in 30 minutes.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="11-submission-checklist-hour-2830">11. Submission checklist (Hour 28–30)</h2>
+<ul>
+<li>[ ] <code>README.md</code> is clean: problem statement, demo GIF, architecture diagram, install steps, env table, ethics note, team credits.</li>
+<li>[ ] <code>CONTRACTS.md</code> present and unchanged from this document.</li>
+<li>[ ] <code>LICENSE</code> (MIT or Apache-2.0).</li>
+<li>[ ] <code>.env.example</code> has zero live secrets.</li>
+<li>[ ] <code>.gitignore</code> excludes <code>vault/</code>, <code>gbrain_temp/</code>, <code>node_modules/</code>, <code>**/.git/</code>, <code>uploads/</code>.</li>
+<li>[ ] Repository is public: <code>https://github.com/Aayushashsahu/J.A.R.V.I.S</code>.</li>
+<li>[ ] Deployment URL is live (Render / Railway free tier) and the link works.</li>
+<li>[ ] Demo video (≤ 3 minutes) uploaded to the hackathon portal.</li>
+<li>[ ] Five screenshots embedded in README (Upload, Chat+Cite, Agent Trace, Knowledge Graph, Settings/Auth).</li>
+<li>[ ] Pitch script rehearsed twice.</li>
+</ul>
+<hr />
+<h2 id="12-hand-off-after-submission">12. Hand-off after submission</h2>
+<p><strong>Aayush is "free" after Hour 30.</strong> The following tasks go to Navansh so the demo and the next-sprint prep don't sit on Aayush:</p>
+<ol>
+<li>Open the GitHub issues list: <code>[demo]</code> tag for any tester feedback.</li>
+<li>Triage the next week's worth of P0/P1 issues.</li>
+<li>Coordinate with Nirupam on a follow-up UX pass on the agent trace panel.</li>
+<li>Schedule the next sprint review with all four teammates.</li>
+</ol>
+<p>If you have nothing else worth doing today, ping the team that submission button has been clicked.</p>
+<hr />
+<h2 id="13-copy-paste-messages-for-teammates">13. Copy-paste messages for teammates</h2>
+<blockquote>
+<p><strong>Paste as your first message in the group DM when the sprint clock starts:</strong></p>
+</blockquote>
+<h3 id="navansh">→ Navansh</h3>
+<blockquote>
+<p>Hey — welcome to the team. J.A.R.V.I.S sprint is starting now. Read this first: <strong><code>CONTRACTS.md</code></strong> at https://github.com/Aayushashsahu/J.A.R.V.I.S/blob/main/CONTRACTS.md (I'll commit it in 30 min). You're RAG lead. Day 1 (0–8h):</p>
+<ol>
+<li>Pull <code>feat/navansh-rag</code> from origin. Add <code>POST /api/ingest/upload</code>.</li>
+<li>Implement hybrid search (BM25 + cosine) and RRF.</li>
+<li>Wire <code>/api/chat</code> against the contract shape.</li>
+</ol>
+<p>Open questions: ping me (Aayush) on infra/secrets issues only. Use the group chat for everything else. Tag your PRs <code>[contract]</code> if they touch CONTRACTS.md, <code>[secrets]</code> if they touch env, <code>[demo]</code> if it's user-facing. Standup every 4 hours, top of the hour. Profile pic is set so @ mention me with <strong>architect</strong> to escalate.</p>
+</blockquote>
+<h3 id="yash">→ Yash</h3>
+<blockquote>
+<p>Hey — welcome. J.A.R.V.I.S sprint is starting now. Read <strong><code>CONTRACTS.md</code></strong> first (linked above). You're agent/reasoning lead. Day 1 (0–8h):</p>
+<ol>
+<li>Pull <code>feat/yash-agents</code>. Lock framework to LangGraph; pin in <code>requirements.txt</code>.</li>
+<li>Stub <code>/api/agent/orchestrate</code> to the contract shape today.</li>
+<li>Single-agent flow first (planner → retriever → verifier → formatter).</li>
+</ol>
+<p>LLM order: NVIDIA NIM (Llama 3.1 70B) <strong>primary</strong>, Gemini <strong>fallback</strong> — both are wired through <code>llm_provider.py</code>. No new secret additions. Tag PRs <code>[contract]</code> for shape changes. Standup every 4h. Ping me <strong>architect</strong> for infra/secrets/submission issues only.</p>
+</blockquote>
+<h3 id="nirupam-pal">→ Nirupam Pal</h3>
+<blockquote>
+<p>Hey — welcome. J.A.R.V.I.S sprint is starting now. Read <strong><code>CONTRACTS.md</code></strong> first (linked above). You're frontend lead. Day 1 (0–8h):</p>
+<ol>
+<li>Pull <code>feat/nirupam-ui</code>. Run <code>npm install</code>. Confirm Next.js dev server on :3000.</li>
+<li>Skeleton dashboard: query + answer + citations + upload tiles.</li>
+<li>Wire <code>&lt;QueryBox /&gt;</code> to <code>POST /api/chat</code>.</li>
+</ol>
+<p><strong>Frontend never holds secrets.</strong> If you need any flag value for a feature, expose it via <code>/api/config</code> (debug endpoint) and I'll add it. Tag PRs <code>[demo]</code> for user-facing changes. Standup every 4h. Ping me <strong>architect</strong> for infra/secrets/submission issues only.</p>
+</blockquote>
+<hr />
+<h2 id="14-the-two-things-aayush-will-not-write">14. The two things Aayush will <em>not</em> write</h2>
+<ol>
+<li><strong>No live secrets in the repo at submission.</strong> Final scan: <code>git grep -nE '(nvapi-|sk-[a-zA-Z]_|AIza[A-Za-z0-9_-]{20,}|"eyJ)' || echo "clean"</code>.</li>
+<li><strong>No console.log statements at submit time.</strong> Frontend, backend, scripts.</li>
+</ol>
+<p>Both are enforced via a CI step Aayush drops in at Hour 22.</p>
+<hr />
+<h2 id="15-definition-of-done-every-pr">15. Definition of Done (every PR)</h2>
+<ul>
+<li>[ ] Branch name starts with <code>feat/</code>, <code>fix/</code>, or <code>docs/</code>.</li>
+<li>[ ] PR has a one-line summary line that begins with <code>[contract]</code>, <code>[secrets]</code>, <code>[demo]</code>, or <code>[docs]</code>.</li>
+<li>[ ] At least one reviewer (<code>@Aayushashsahu</code> for <code>[contract]</code>, <code>[secrets]</code>, <code>[demo]</code>).</li>
+<li>[ ] <code>git grep</code> for live secrets is clean.</li>
+<li>[ ] All four demo flows (Upload → Chat → Agent → Graph) still pass smoke test.</li>
+</ul>
+<p>If all five boxes are checked, Aayush merges in under 5 minutes.</p>
+<hr />
+<p><em>End of plan. Good luck — and remember: 2 days, 4 people, 30 hours. Submit early; polish after.</em></p></body></html>
