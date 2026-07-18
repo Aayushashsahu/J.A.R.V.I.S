@@ -2,6 +2,7 @@ import networkx as nx
 from sqlalchemy.orm import Session
 import re
 from typing import List, Dict, Any
+import itertools
 
 class KnowledgeGraphManager:
     def __init__(self):
@@ -67,15 +68,13 @@ class KnowledgeGraphManager:
         all_new_entities = list(set(goal_entities + source_entities))
         
         # Connect everything in this run
-        for i in range(len(all_new_entities)):
-            for j in range(i + 1, len(all_new_entities)):
-                u, v = all_new_entities[i], all_new_entities[j]
-                if self.graph.has_edge(u, v):
-                    # Increment weight slightly up to max of 1.0
-                    current_w = self.graph[u][v].get('weight', 0.5)
-                    self.graph[u][v]['weight'] = min(1.0, current_w + 0.05)
-                else:
-                    self.graph.add_edge(u, v, weight=0.5)
+        for u, v in itertools.combinations(all_new_entities, 2):
+            if self.graph.has_edge(u, v):
+                # Increment weight slightly up to max of 1.0
+                current_w = self.graph[u][v].get('weight', 0.5)
+                self.graph[u][v]['weight'] = min(1.0, current_w + 0.05)
+            else:
+                self.graph.add_edge(u, v, weight=0.5)
 
     def sync_with_db(self, db: Session):
         from app.db.models import Document
@@ -84,13 +83,11 @@ class KnowledgeGraphManager:
             docs = db.query(Document).all()
             for doc in docs:
                 terms = self.extract_entities_from_text(doc.filename)
-                for i in range(len(terms)):
-                    for j in range(i + 1, len(terms)):
-                        u, v = terms[i], terms[j]
-                        if self.graph.has_edge(u, v):
-                            self.graph[u][v]['weight'] = min(1.0, self.graph[u][v]['weight'] + 0.02)
-                        else:
-                            self.graph.add_edge(u, v, weight=0.4)
+                for u, v in itertools.combinations(terms, 2):
+                    if self.graph.has_edge(u, v):
+                        self.graph[u][v]['weight'] = min(1.0, self.graph[u][v]['weight'] + 0.02)
+                    else:
+                        self.graph.add_edge(u, v, weight=0.4)
         except Exception:
             pass # Safe fallback if DB not fully ready
             

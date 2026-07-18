@@ -31,17 +31,22 @@ async def upload_document(
 
     content = await file.read()
     
+    # Sanitize filename to prevent path traversal
+    safe_filename = os.path.basename(file.filename.replace("\\", "/"))
+    if not safe_filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
     # Save file locally
     file_path = os.path.join(UPLOAD_DIR, file.filename)
     async with await anyio.open_file(file_path, "wb") as f:
         await f.write(content)
 
     # Save to DB
-    ext = file.filename.split('.')[-1].lower()
+    ext = safe_filename.split('.')[-1].lower()
     doc = Document(
         user_id=current_user.id,
         workspace_id=workspace_id,
-        filename=file.filename,
+        filename=safe_filename,
         content_type=ext,
         file_path=file_path
     )
@@ -55,7 +60,7 @@ async def upload_document(
         # carries text, chunk_index, page_number, and clause_id.
         # For PDFs the page_number is the physical PDF page (1-based).
         # For txt/md/docx it is None (those formats have no stable page concept).
-        chunk_metadata = DocumentProcessor.process_with_metadata(file.filename, content)
+        chunk_metadata = DocumentProcessor.process_with_metadata(safe_filename, content)
 
         texts       = [cm.text        for cm in chunk_metadata]
         page_nums   = [cm.page_number for cm in chunk_metadata]
@@ -69,7 +74,7 @@ async def upload_document(
         qdrant_service.insert_chunks(
             workspace_id=workspace_id,
             document_id=doc.id,
-            source_file=file.filename,
+            source_file=safe_filename,
             chunks=texts,
             embeddings=embeddings,
             page_numbers=page_nums,

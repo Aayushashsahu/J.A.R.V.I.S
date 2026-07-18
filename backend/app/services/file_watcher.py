@@ -4,7 +4,6 @@ from watchdog.observers.polling import PollingObserver as Observer
 from watchdog.events import FileSystemEventHandler
 from app.db.session import SessionLocal
 from app.db.models import QueuedTask
-from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
