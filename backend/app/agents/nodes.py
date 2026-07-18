@@ -12,9 +12,8 @@ from app.agents.service import (
 
 logger = logging.getLogger(__name__)
 
-# TODO: Call the existing RAG/chat retriever instead of building a separate RAG system.
-# If the existing RAG service is not ready, fall back to mock citation-backed chunks.
 def retrieve_rag_documents(workspace_id: str, query: str) -> List[Dict[str, Any]]:
+    """Retrieve safety documents matching the query using vector embeddings search."""
     results = []
     
     # Skip real RAG if no valid Gemini API key is configured (avoids hanging on retries with mock key)
@@ -24,28 +23,21 @@ def retrieve_rag_documents(workspace_id: str, query: str) -> List[Dict[str, Any]
         return get_deterministic_retriever_fallback(query)
     
     try:
-        from app.services.llm_provider import llm_provider
-        from app.services.qdrant_service import qdrant_service
+        from app.services.retriever import retriever
         
-        # Generate embeddings using the existing LLM provider
-        embeddings = llm_provider.generate_embeddings([query])
-        if embeddings and len(embeddings) > 0:
-            # Search Qdrant via the existing qdrant_service
-            qdrant_hits = qdrant_service.search(
-                workspace_id=workspace_id,
-                query_embedding=embeddings[0],
-                limit=5
-            )
-            if qdrant_hits:
-                for hit in qdrant_hits:
-                    source = hit.payload.get('source_file', 'Unknown')
-                    content = hit.payload.get('content', '')
-                    score = hit.score if hasattr(hit, 'score') else 0.8
-                    results.append({
-                        "source": source,
-                        "content": content,
-                        "confidence": score
-                    })
+        chunk_results = retriever.retrieve(
+            query=query,
+            workspace_id=workspace_id,
+            top_k=5
+        )
+
+        if chunk_results:
+            for chunk in chunk_results:
+                results.append({
+                    "source": chunk.source,
+                    "content": chunk.text,
+                    "confidence": chunk.score
+                })
     except Exception as e:
         logger.warning(f"RAG Qdrant retrieval failed: {e}. Falling back to default mock data.")
     
