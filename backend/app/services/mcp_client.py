@@ -34,13 +34,22 @@ class GBrainMCPClient:
                             if r1.status_code == 200:
                                 nonce = r1.json()['url'].split('/')[-1]
                                 r2 = await http.get(f'http://127.0.0.1:8001/admin/auth/{nonce}')
-                                cookie = r2.cookies.get('gbrain_admin')
-                                if cookie:
-                                    r3 = await http.post('http://127.0.0.1:8001/admin/api/api-keys', json={'name': 'jarvis_backend'}, headers={'Cookie': f'gbrain_admin={cookie}'})
-                                    if r3.status_code == 200:
-                                        gbrain_api_key = r3.json().get('token')
-                                        os.environ["GBRAIN_API_KEY"] = gbrain_api_key
-                                        logger.info("Generated new GBrain API Key.")
+                                if r2.status_code in (200, 302, 303):
+                                    cookie = r2.cookies.get('gbrain_admin')
+                                    if cookie:
+                                        r3 = await http.post('http://127.0.0.1:8001/admin/api/api-keys', json={'name': 'jarvis_backend'}, headers={'Cookie': f'gbrain_admin={cookie}'})
+                                        if r3.status_code == 200:
+                                            gbrain_api_key = r3.json().get('token')
+                                            os.environ["GBRAIN_API_KEY"] = gbrain_api_key
+                                            logger.info("Generated new GBrain API Key.")
+                                        else:
+                                            logger.warning(f"Failed to generate API Key: Status {r3.status_code}")
+                                    else:
+                                        logger.warning("Could not extract gbrain_admin cookie from Magic Link.")
+                                else:
+                                    logger.warning(f"Magic Link redemption failed: Status {r2.status_code}")
+                            else:
+                                logger.warning(f"Magic Link issuance failed: Status {r1.status_code}")
                 
                 headers = {}
                 if gbrain_api_key:

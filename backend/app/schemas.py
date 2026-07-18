@@ -57,3 +57,15 @@ class Citation(BaseModel):
     score: float
     snippet: str
 
+class DocumentResponse(BaseModel):
+    id: str
+    user_id: str
+    workspace_id: str
+    filename: str
+    content_type: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+

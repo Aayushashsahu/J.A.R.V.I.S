@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 export const api = {
   async get(endpoint: string) {
@@ -38,5 +38,20 @@ export const api = {
     });
     if (!res.ok) throw new Error('API Request Failed');
     return res.json();
+  },
+  async delete(endpoint: string) {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_URL}${endpoint}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.detail || 'DELETE Request Failed');
+    }
+    return res.json();
   }
 };
+

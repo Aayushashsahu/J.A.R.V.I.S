@@ -1,10 +1,13 @@
 import io
 import re
+import logging
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 from docx import Document
 from PyPDF2 import PdfReader
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class ChunkMetadata:
@@ -24,7 +27,9 @@ class ChunkMetadata:
 class DocumentProcessor:
     @staticmethod
     def parse_txt(content: bytes) -> str:
+        """Decode plain text file contents."""
         return content.decode('utf-8')
+
 
     @staticmethod
     def parse_md(content: bytes) -> str:

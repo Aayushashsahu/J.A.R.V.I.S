@@ -1,6 +1,7 @@
 import os
 import logging
 import json
+import re
 from typing import List, Dict, Any, Optional
 from app.agents.service import (
     agent_llm_service,
@@ -12,9 +13,21 @@ from app.agents.service import (
 
 logger = logging.getLogger(__name__)
 
+def clean_agent_json(text: str) -> str:
+    """Extract valid JSON from LLM markdown code blocks or text wrappers."""
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```[a-zA-Z]*\n", "", cleaned)
+        cleaned = re.sub(r"\n```$", "", cleaned)
+    match = re.search(r"(\[.*\]|\{.*\})", cleaned, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    return cleaned.strip()
+
 # TODO: Call the existing RAG/chat retriever instead of building a separate RAG system.
 # If the existing RAG service is not ready, fall back to mock citation-backed chunks.
 def retrieve_rag_documents(workspace_id: str, query: str) -> List[Dict[str, Any]]:
+    """Retrieve safety documents matching the query using vector embeddings search."""
     results = []
     
     # Skip real RAG if no valid Gemini API key is configured (avoids hanging on retries with mock key)
@@ -56,6 +69,7 @@ def retrieve_rag_documents(workspace_id: str, query: str) -> List[Dict[str, Any]
     return results
 
 def planner_node(state: Dict[str, Any]) -> Dict[str, Any]:
+    """Execute Planning Node breaking down goal queries into a trace checklist."""
     goal = state["goal"]
     max_steps = state.get("max_steps", 6)
     logger.info(f"Executing planner node for goal: {goal}")
@@ -74,8 +88,7 @@ def planner_node(state: Dict[str, Any]) -> Dict[str, Any]:
     try:
         res = agent_llm_service.call_llm(prompt=prompt, system_prompt=system_prompt)
         # Parse the JSON response
-        # Clean up any potential markdown wrapping
-        clean_res = res.strip("```json").strip("```").strip()
+        clean_res = clean_agent_json(res)
         steps = json.loads(clean_res)
         if not isinstance(steps, list):
             steps = []
@@ -98,6 +111,7 @@ def planner_node(state: Dict[str, Any]) -> Dict[str, Any]:
         "steps": steps,
         "trace": state.get("trace", []) + [trace_event]
     }
+
 
 def retriever_node(state: Dict[str, Any]) -> Dict[str, Any]:
     workspace_id = state["workspace_id"]

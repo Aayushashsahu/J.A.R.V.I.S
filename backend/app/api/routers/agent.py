@@ -8,6 +8,7 @@ import logging
 from typing import Dict, Any
 
 from app.api import deps
+from app.db.models import User, Workspace
 from app.agents.schemas import AgentOrchestrateRequest, KGNeighborResponse
 from app.agents.graph import agent_graph
 from app.agents.kg import kg_manager
@@ -16,7 +17,7 @@ from app.agents.service import save_agent_run
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-async def run_agent_and_stream(request: AgentOrchestrateRequest, db: Session):
+async def run_agent_and_stream(request: AgentOrchestrateRequest, db: Session, user_id: str):
     run_id = str(uuid.uuid4())
     goal = request.goal
     workspace_id = request.workspace_id
@@ -54,7 +55,6 @@ async def run_agent_and_stream(request: AgentOrchestrateRequest, db: Session):
                 
         iterator = execute()
         while True:
-            # Enforce 60s timeout on each step/whole execution
             event = await asyncio.wait_for(iterator.__anext__(), timeout=60.0)
             
             node_name = list(event.keys())[0]
@@ -70,7 +70,6 @@ async def run_agent_and_stream(request: AgentOrchestrateRequest, db: Session):
                 sources = state_updates.get("sources", [])
                 
     except StopAsyncIteration:
-        # Completed successfully
         pass
     except asyncio.TimeoutError:
         logger.warning(f"Agent run {run_id} timed out after 60s.")
@@ -128,33 +127,22 @@ async def run_agent_and_stream(request: AgentOrchestrateRequest, db: Session):
 @router.post("/agent/orchestrate")
 async def agent_orchestrate(
     request: AgentOrchestrateRequest,
-    db: Session = Depends(deps.get_db)
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
 ):
     """
     POST `/api/agent/orchestrate`
-    Accepts workspace_id, goal, and max_steps, runs the agent flow, 
-    streams live trace SSE events, and stores the run in the database.
+    Securely runs the agent flow, streams live trace SSE events,
+    and stores the run trace in the database.
     """
-    headers = {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
-        "X-Accel-Buffering": "no"
-    }
-    return StreamingResponse(
-        run_agent_and_stream(request, db),
-        headers=headers
-    )
+    # Verify workspace ownership
+    workspace = db.query(Workspace).filter(
+        Workspace.id == request.workspace_id,
+        Workspace.user_id == current_user.id
+    ).first()
+    if not workspace:
+        raise HTTPException(status_code=404, detail="Workspace not found")
 
-@router.post("/agent/stream")
-async def agent_stream(
-    request: AgentOrchestrateRequest,
-    db: Session = Depends(deps.get_db)
-):
-    """
-    POST `/api/agent/stream`
-    Streams the node trace sequence: planner -> retriever -> verifier -> final.
-    """
     headers = {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
@@ -162,14 +150,15 @@ async def agent_stream(
         "X-Accel-Buffering": "no"
     }
     return StreamingResponse(
-        run_agent_and_stream(request, db),
+        run_agent_and_stream(request, db, current_user.id),
         headers=headers
     )
 
 @router.get("/kg/neighbors/{entity}", response_model=KGNeighborResponse)
 def get_kg_neighbors(
     entity: str,
-    db: Session = Depends(deps.get_db)
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
 ):
     """
     GET `/api/kg/neighbors/{entity}`
@@ -182,3 +171,4 @@ def get_kg_neighbors(
         
     neighbors_data = kg_manager.get_neighbors(entity)
     return neighbors_data
+

@@ -11,6 +11,8 @@ from app.db.models import AgentRun
 logger = logging.getLogger(__name__)
 
 class AgentLLMService:
+    """Service to handle high-level LLM calls with NVIDIA NIM primary and Gemini fallbacks."""
+
     def __init__(self):
         self.nvidia_api_key = os.getenv("NVIDIA_API_KEY", "")
         self.gemini_api_key = os.getenv("GEMINI_API_KEY", "")
@@ -25,7 +27,7 @@ class AgentLLMService:
             except Exception as e:
                 logger.error(f"Failed to initialize NVIDIA client: {e}")
 
-    def call_llm(self, prompt: str, system_prompt: str = None) -> str:
+    def call_llm(self, prompt: str, system_prompt: Optional[str] = None) -> str:
         """
         Attempts NVIDIA NIM, then Gemini, and raises RuntimeError if both fail or keys are missing.
         """
@@ -64,7 +66,16 @@ class AgentLLMService:
 agent_llm_service = AgentLLMService()
 
 # Database helpers
-def save_agent_run(db: Session, run_id: str, workspace_id: str, goal: str, trace: List[Dict[str, Any]], final_answer: Optional[str], sources: List[str]):
+def save_agent_run(
+    db: Session,
+    run_id: str,
+    workspace_id: str,
+    goal: str,
+    trace: List[Dict[str, Any]],
+    final_answer: Optional[str],
+    sources: List[str]
+) -> Optional[AgentRun]:
+    """Persist an agent orchestration execution run trace to the database."""
     try:
         run = AgentRun(
             id=run_id,
@@ -77,14 +88,17 @@ def save_agent_run(db: Session, run_id: str, workspace_id: str, goal: str, trace
         db.add(run)
         db.commit()
         db.refresh(run)
+        logger.info(f"Saved agent run trace for run_id {run_id} successfully.")
         return run
     except Exception as e:
         logger.error(f"Failed to save agent run trace: {e}")
         db.rollback()
         return None
 
-def get_agent_run(db: Session, run_id: str):
+def get_agent_run(db: Session, run_id: str) -> Optional[AgentRun]:
+    """Retrieve saved agent run details from the database by ID."""
     return db.query(AgentRun).filter(AgentRun.id == run_id).first()
+
 
 # Deterministic Fallbacks for Demo Safety
 def get_deterministic_planner_fallback(goal: str) -> List[str]:

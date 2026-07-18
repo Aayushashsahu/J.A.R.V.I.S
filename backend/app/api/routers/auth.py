@@ -1,4 +1,5 @@
 from datetime import timedelta
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -10,11 +11,14 @@ from app.db.models import User, Workspace
 from app.schemas import UserCreate, UserResponse, Token
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 @router.post("/register", response_model=UserResponse)
-def register(user_in: UserCreate, db: Session = Depends(deps.get_db)):
+def register(user_in: UserCreate, db: Session = Depends(deps.get_db)) -> User:
+    """Register a new user and bootstrap default workspaces."""
     user = db.query(User).filter(User.email == user_in.email).first()
     if user:
+        logger.warning(f"Registration failed: Email {user_in.email} already exists")
         raise HTTPException(
             status_code=400,
             detail="The user with this email already exists in the system.",
@@ -33,14 +37,17 @@ def register(user_in: UserCreate, db: Session = Depends(deps.get_db)):
         
     db.commit()
     db.refresh(user)
+    logger.info(f"Successfully registered user: {user.email}")
     return user
 
 @router.post("/login", response_model=Token)
 def login_access_token(
     db: Session = Depends(deps.get_db), form_data: OAuth2PasswordRequestForm = Depends()
-):
+) -> dict:
+    """Verify user credentials and generate an OAuth2 token."""
     user = db.query(User).filter(User.email == form_data.username).first()
     if not user or not security.verify_password(form_data.password, user.hashed_password):
+        logger.warning(f"Login failed: Incorrect credentials for username {form_data.username}")
         raise HTTPException(status_code=400, detail="Incorrect email or password")
         
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -52,5 +59,7 @@ def login_access_token(
     }
 
 @router.get("/me", response_model=UserResponse)
-def read_users_me(current_user: User = Depends(deps.get_current_user)):
+def read_users_me(current_user: User = Depends(deps.get_current_user)) -> User:
+    """Retrieve logged-in user profile details."""
     return current_user
+

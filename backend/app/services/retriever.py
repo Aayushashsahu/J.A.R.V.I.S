@@ -309,12 +309,21 @@ class Retriever:
         # Sort by RRF score descending, take top-k.
         ranked = sorted(rrf_map.values(), key=lambda x: x[0], reverse=True)[:top_k]
 
+        if not ranked:
+            return []
+
+        # Normalize RRF scores between 0.0 and 1.0 for standardized downstream consumption
+        max_possible_score = (1.0 / k) + (1.0 / (k + 1))  # Highest possible sum if item is rank 1 in both lists
+        min_possible_score = 1.0 / (k + top_k)           # Single low contribution
+
+        score_range = max_possible_score - min_possible_score if max_possible_score > min_possible_score else 1.0
+
         return [
             ChunkResult(
                 chunk_id=chunk.chunk_id,
                 source=chunk.source,
                 text=chunk.text,
-                score=rrf_score,             # RRF score replaces original score
+                score=round(min(1.0, max(0.0, (rrf_score - min_possible_score) / score_range)), 4),
                 page=chunk.page,
                 clause_id=chunk.clause_id,
                 document_id=chunk.document_id,
@@ -323,6 +332,6 @@ class Retriever:
         ]
 
 
-# Module-level singleton — import this everywhere instead of instantiating
-# a new Retriever per request.
+# Module-level singleton
 retriever = Retriever()
+

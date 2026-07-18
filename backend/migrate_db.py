@@ -18,3 +18,6 @@ with engine.begin() as conn:
         print("Added source_file to memories")
     except Exception as e:
         print("memories alter failed:", e)
+
+    print("Migration execution cycle finished successfully.")
+

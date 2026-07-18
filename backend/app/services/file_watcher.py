@@ -9,31 +9,35 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 class VaultEventHandler(FileSystemEventHandler):
+    """Event handler for monitoring local vault markdown document updates."""
+    
     def on_created(self, event):
         if not event.is_directory and event.src_path.endswith('.md'):
-            logger.info(f"File Created: {event.src_path}")
-            self._queue_document_processing(event.src_path, "created")
+            abs_path = os.path.abspath(event.src_path)
+            logger.info(f"Vault File Created: {abs_path}")
+            self._queue_document_processing(abs_path, "created")
 
     def on_modified(self, event):
         if not event.is_directory and event.src_path.endswith('.md'):
-            logger.info(f"File Modified: {event.src_path}")
-            self._queue_document_processing(event.src_path, "modified")
+            abs_path = os.path.abspath(event.src_path)
+            logger.info(f"Vault File Modified: {abs_path}")
+            self._queue_document_processing(abs_path, "modified")
 
     def on_deleted(self, event):
         if not event.is_directory and event.src_path.endswith('.md'):
-            logger.info(f"File Deleted: {event.src_path}")
+            abs_path = os.path.abspath(event.src_path)
+            logger.info(f"Vault File Deleted: {abs_path}")
+            # In a future release, trigger automatic deletion of DB and Qdrant points
 
     def _queue_document_processing(self, file_path: str, action: str):
-        # We need a user to tie this to. For a single user OS, we can find the default user
-        # or rely on the background worker to look it up.
+        """Enqueue processing task for worker processing."""
         logger.info(f"Queueing task for {action} on {file_path}")
         try:
             db = SessionLocal()
-            # Find admin user
             from app.db.models import User
             admin_user = db.query(User).first()
             if not admin_user:
-                logger.warning("No user found in DB. Skipping file processing queue.")
+                logger.warning("No user found in database. Skipping file processing task queue.")
                 return
 
             task = QueuedTask(
@@ -43,6 +47,7 @@ class VaultEventHandler(FileSystemEventHandler):
             )
             db.add(task)
             db.commit()
+            logger.info(f"Successfully enqueued processing task for {file_path}")
         except Exception as e:
             logger.error(f"Error queueing task for {file_path}: {e}")
         finally:
@@ -50,15 +55,18 @@ class VaultEventHandler(FileSystemEventHandler):
                 db.close()
 
 def start_watcher():
+    """Start local directory polling observer watching the Obsidian vault."""
     vault_path = os.environ.get("JARVIS_VAULT_PATH", "./vault")
-    if not os.path.exists(vault_path):
-        logger.warning(f"Vault path {vault_path} does not exist. Creating it.")
-        os.makedirs(vault_path, exist_ok=True)
+    normalized_path = os.path.abspath(vault_path)
+    
+    if not os.path.exists(normalized_path):
+        logger.warning(f"Vault path {normalized_path} does not exist. Initializing directory.")
+        os.makedirs(normalized_path, exist_ok=True)
     
     event_handler = VaultEventHandler()
     observer = Observer()
-    observer.schedule(event_handler, vault_path, recursive=True)
+    observer.schedule(event_handler, normalized_path, recursive=True)
     observer.start()
-    logger.info("Vault Watcher Started")
-    logger.info(f"Watching {vault_path}")
+    logger.info(f"Vault Watcher Daemon started polling path: {normalized_path}")
     return observer
+

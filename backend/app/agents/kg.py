@@ -1,9 +1,14 @@
+import logging
 import networkx as nx
 from sqlalchemy.orm import Session
 import re
 from typing import List, Dict, Any
 
+logger = logging.getLogger(__name__)
+
 class KnowledgeGraphManager:
+    """Manages the in-memory NetworkX Knowledge Graph and synchronization logic."""
+
     def __init__(self):
         self.graph = nx.Graph()
         self.common_terms = [
@@ -17,8 +22,7 @@ class KnowledgeGraphManager:
         for term in self.common_terms:
             self.graph.add_node(term)
         
-        # Add some default edges to match the contract example exactly
-        # "PESO" <-> "OISD-118": 0.81
+        # Add default edges
         self.graph.add_edge("PESO", "OISD-118", weight=0.81)
         self.graph.add_edge("OISD-118", "LPG", weight=0.75)
         self.graph.add_edge("PESO", "LPG", weight=0.85)
@@ -32,28 +36,25 @@ class KnowledgeGraphManager:
         self.graph.add_edge("Hydrocarbon", "LPG", weight=0.83)
 
     def extract_entities_from_text(self, text: str) -> List[str]:
+        """Extract matching common terms from the text using regex search patterns."""
         found = []
         if not text:
             return found
         for term in self.common_terms:
-            # Case insensitive whole word or substring match
             pattern = re.escape(term)
             if re.search(pattern, text, re.IGNORECASE):
                 found.append(term)
         return found
 
     def update_graph_from_run(self, goal: str, sources: List[str]):
-        # Extract terms from goal
+        """Inject nodes and update relationship weights based on an agent execution run."""
         goal_entities = self.extract_entities_from_text(goal)
         
-        # Also clean and add source names as entities
         source_entities = []
         for src in sources:
             if not src:
                 continue
-            # clean source name (e.g. "OISD-118.pdf" -> "OISD-118")
             clean_src = src.replace(".pdf", "").replace(".docx", "").replace(".txt", "").strip()
-            # If it's similar to one of the common terms, map to it
             matched = False
             for term in self.common_terms:
                 if clean_src.lower() == term.lower() or clean_src.lower().startswith(term.lower()):
@@ -66,20 +67,18 @@ class KnowledgeGraphManager:
         
         all_new_entities = list(set(goal_entities + source_entities))
         
-        # Connect everything in this run
         for i in range(len(all_new_entities)):
             for j in range(i + 1, len(all_new_entities)):
                 u, v = all_new_entities[i], all_new_entities[j]
                 if self.graph.has_edge(u, v):
-                    # Increment weight slightly up to max of 1.0
                     current_w = self.graph[u][v].get('weight', 0.5)
                     self.graph[u][v]['weight'] = min(1.0, current_w + 0.05)
                 else:
                     self.graph.add_edge(u, v, weight=0.5)
 
     def sync_with_db(self, db: Session):
+        """Pull document changes and run executions to rebuild knowledge graph edges."""
         from app.db.models import Document
-        # Extract from documents
         try:
             docs = db.query(Document).all()
             for doc in docs:
@@ -91,10 +90,9 @@ class KnowledgeGraphManager:
                             self.graph[u][v]['weight'] = min(1.0, self.graph[u][v]['weight'] + 0.02)
                         else:
                             self.graph.add_edge(u, v, weight=0.4)
-        except Exception:
-            pass # Safe fallback if DB not fully ready
+        except Exception as doc_err:
+            logger.warning(f"Knowledge Graph docs synchronization sync failed: {doc_err}")
             
-        # Extract from agent runs
         try:
             from app.db.models import AgentRun
             runs = db.query(AgentRun).all()
@@ -104,11 +102,12 @@ class KnowledgeGraphManager:
                 if run.sources_json:
                     try:
                         sources = json.loads(run.sources_json)
-                    except:
-                        pass
+                    except Exception as parse_e:
+                        logger.debug(f"Failed to parse source json for run {run.id}: {parse_e}")
                 self.update_graph_from_run(run.goal, sources)
-        except Exception:
-            pass
+        except Exception as run_err:
+            logger.warning(f"Knowledge Graph runs synchronization sync failed: {run_err}")
+
 
     def get_neighbors(self, entity: str) -> Dict[str, Any]:
         # Case-insensitive lookup for matching node

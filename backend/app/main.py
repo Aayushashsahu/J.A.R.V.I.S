@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.db.session import engine, Base
-from app.api.routers import auth, workspaces, documents, chat, brain, timeline, hud, explain, agent
+from app.api.routers import auth, workspaces, documents, chat, brain, timeline, hud, explain, agent, dashboard
 from app.services.file_watcher import start_watcher
 from app.services.batch_processor import run_batch_processor
 from app.services.reflection_engine import run_reflection_engine
@@ -30,19 +30,19 @@ async def lifespan(app: FastAPI):
 
     global observer
     observer = start_watcher()
-    
+
     # Start background processors
     task1 = asyncio.create_task(run_batch_processor())
     task2 = asyncio.create_task(run_reflection_engine())
     background_tasks.add(task1)
     background_tasks.add(task2)
-    
+
     yield
-    
+
     if observer:
         observer.stop()
         observer.join()
-    
+
     for task in background_tasks:
         task.cancel()
 
@@ -69,6 +69,7 @@ app.include_router(timeline.router, prefix=f"{settings.API_V1_STR}", tags=["time
 app.include_router(hud.router, prefix=f"{settings.API_V1_STR}/hud", tags=["hud"])
 app.include_router(explain.router, prefix=f"{settings.API_V1_STR}", tags=["explain"])
 app.include_router(agent.router, prefix=f"{settings.API_V1_STR}", tags=["agent"])
+app.include_router(dashboard.router, prefix=f"{settings.API_V1_STR}", tags=["dashboard"])
 
 @app.get("/")
 def root():

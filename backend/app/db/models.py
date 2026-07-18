@@ -23,6 +23,7 @@ memory_tags = Table(
 )
 
 class User(Base):
+    """User database representation for security, tokens, and multi-tenancy separation."""
     __tablename__ = "users"
 
     id = Column(String, primary_key=True, default=generate_uuid)
@@ -33,6 +34,7 @@ class User(Base):
     workspaces = relationship("Workspace", back_populates="user", cascade="all, delete-orphan")
 
 class Workspace(Base):
+    """Isolated tenant environment representing a collection of memories, documents, and logs."""
     __tablename__ = "workspaces"
 
     id = Column(String, primary_key=True, default=generate_uuid)
@@ -45,6 +47,7 @@ class Workspace(Base):
     documents = relationship("Document", back_populates="workspace", cascade="all, delete-orphan")
     memories = relationship("Memory", back_populates="workspace", cascade="all, delete-orphan")
     tasks = relationship("Task", back_populates="workspace", cascade="all, delete-orphan")
+
 
 class Conversation(Base):
     __tablename__ = "conversations"

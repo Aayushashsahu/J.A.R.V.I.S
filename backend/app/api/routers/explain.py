@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -8,6 +9,7 @@ from app.db.models import User, Workspace, PKMEntity, Belief, Memory
 from app.services.retriever import retriever
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 class EvidenceItem(BaseModel):
     source_file: str
@@ -25,10 +27,20 @@ async def explain_memory(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
+    """Provide an explainability trace of claims backed by the evidence hierarchy."""
     evidence_list = []
     
     # Priority 1: Search source documents (via Retriever)
     if workspace_id:
+        # Verify workspace ownership
+        workspace = db.query(Workspace).filter(
+            Workspace.id == workspace_id,
+            Workspace.user_id == current_user.id
+        ).first()
+        if not workspace:
+            logger.warning(f"Unauthorized explanation query: User {current_user.id} requested workspace {workspace_id}")
+            raise HTTPException(status_code=404, detail="Workspace not found")
+
         try:
             chunks = retriever.retrieve(query=query, workspace_id=workspace_id, top_k=3)
             for chunk in chunks:
@@ -37,9 +49,8 @@ async def explain_memory(
                     snippet=chunk.text,
                     confidence=int(chunk.score * 100),
                 ))
-        except Exception:
-
-            pass
+        except Exception as e:
+            logger.error(f"Retriever search during explain failed: {e}")
 
     # Priority 1.5: GBrain Synthesis
     from app.services.mcp_client import gbrain_client
@@ -52,11 +63,9 @@ async def explain_memory(
                 confidence=95  # High confidence for synthesized brain memory
             ))
     except Exception as e:
-        pass
+        logger.warning(f"GBrain synthesis during explain failed: {e}")
 
     # Priority 2: Structured Memory (PKM Entities)
-    # Search for entities matching the query
-    # Using simple ILIKE for basic text search in value
     entities = db.query(PKMEntity).filter(
         PKMEntity.user_id == current_user.id,
         PKMEntity.value.ilike(f"%{query}%")
@@ -87,7 +96,9 @@ async def explain_memory(
     else:
         claim = f"No direct evidence found for '{query}'"
 
+    logger.info(f"Generated explanation for '{query}' with {len(evidence_list)} evidence nodes.")
     return ExplainResponse(
         claim=claim,
         evidence=evidence_list
     )
+

@@ -102,4 +102,21 @@ class QdrantService:
         )
         return search_result
 
+    def delete_document_chunks(self, workspace_id: str, document_id: str):
+        """Delete all chunks belonging to a specific document inside a workspace."""
+        try:
+            self.client.delete(
+                collection_name=self.collection_name,
+                points_selector=Filter(
+                    must=[
+                        FieldCondition(key="workspace_id", match=MatchValue(value=workspace_id)),
+                        FieldCondition(key="document_id", match=MatchValue(value=document_id))
+                    ]
+                )
+            )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to delete chunks for document {document_id}: {e}")
+
 qdrant_service = QdrantService()
+

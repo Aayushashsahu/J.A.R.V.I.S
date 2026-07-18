@@ -1,7 +1,7 @@
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.db.models import PKMEntity, Belief, Memory, KnowledgeGraphNode, Suggestion, Entity, Document, MemoryTimelineEvent, QueuedTask
+from app.db.models import PKMEntity, Belief, Memory, KnowledgeGraphNode, KnowledgeGraphEdge, Suggestion, Entity, Document, MemoryTimelineEvent, QueuedTask, AgentRun
 from qdrant_client import QdrantClient
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://jarvis:password@db:5432/jarvis")
@@ -12,6 +12,8 @@ db = SessionLocal()
 try:
     print("Deleting QueuedTasks...")
     db.query(QueuedTask).delete()
+    print("Deleting KnowledgeGraphEdges...")
+    db.query(KnowledgeGraphEdge).delete()
     print("Deleting KnowledgeGraphNodes...")
     db.query(KnowledgeGraphNode).delete()
     print("Deleting Suggestions...")
@@ -28,6 +30,8 @@ try:
     db.query(MemoryTimelineEvent).delete()
     print("Deleting Documents...")
     db.query(Document).delete()
+    print("Deleting AgentRuns...")
+    db.query(AgentRun).delete()
     
     db.commit()
     print("Successfully wiped SQL Database!")
@@ -44,3 +48,4 @@ try:
     print("Wiped Qdrant collection!")
 except Exception as e:
     print(f"Error wiping qdrant: {e}")
+
