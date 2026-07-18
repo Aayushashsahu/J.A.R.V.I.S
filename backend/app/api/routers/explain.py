@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List, Optional
 
 from app.api import deps
-from app.db.models import User, Workspace, PKMEntity, Belief, Memory
+from app.db.models import User, PKMEntity, Belief
 from app.services.retriever import retriever
 
 router = APIRouter()
@@ -51,7 +51,7 @@ async def explain_memory(
                 snippet=gbrain_synthesis[:500] + "..." if len(gbrain_synthesis) > 500 else gbrain_synthesis,
                 confidence=95  # High confidence for synthesized brain memory
             ))
-    except Exception as e:
+    except Exception:
         pass
 
     # Priority 2: Structured Memory (PKM Entities)

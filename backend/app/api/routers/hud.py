@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.api import deps
-from app.db.models import User, PKMEntity, Belief, Memory, Document
+from app.db.models import User, PKMEntity, Belief, Document
 
 router = APIRouter()
 

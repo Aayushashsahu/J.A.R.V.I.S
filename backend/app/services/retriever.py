@@ -18,7 +18,6 @@ chunks: list[ChunkResult] = retriever.retrieve(
     top_k=5,
 )
 """
-from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
