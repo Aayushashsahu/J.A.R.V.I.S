@@ -106,6 +106,168 @@ function ChatContent() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const executeAgentMode = async (userMessage: string, workspaceId: string, token: string | null, API_URL: string) => {
+    try {
+      const response = await fetch(`${API_URL}/agent/orchestrate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          workspace_id: workspaceId,
+          goal: userMessage,
+          max_steps: 10
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Agent pipeline failed to initialize.");
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
+      let partialLine = "";
+      let finalAnswer = "";
+      let localSteps: { node: string; content: string }[] = [];
+
+      while (!done && reader) {
+        const { value, done: readerDone } = await reader.read();
+        done = readerDone;
+        const chunk = decoder.decode(value, { stream: !done });
+        const lines = (partialLine + chunk).split("\n");
+        partialLine = lines.pop() || "";
+
+        for (const line of lines) {
+          const cleaned = line.trim();
+          if (!cleaned.startsWith("data:")) continue;
+          const dataStr = cleaned.slice(5).trim();
+          try {
+            const parsed = JSON.parse(dataStr);
+            if (parsed.event === "trace" || parsed.node) {
+              const stepNode = parsed.node || "system";
+              const stepContent = parsed.content || "";
+              localSteps.push({ node: stepNode, content: stepContent });
+              setAgentSteps([...localSteps]);
+            } else if (parsed.event === "final" || parsed.answer) {
+              finalAnswer = parsed.answer || "";
+            }
+          } catch (err) {
+            // Ignore partial JSON blocks
+          }
+        }
+      }
+
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: finalAnswer || "Agent reasoning finalized.",
+        mode: "agent",
+        steps: localSteps
+      }]);
+
+    } catch (err: any) {
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: `Agent System Error: ${err.message}`,
+        mode: "agent"
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const executeRagMode = async (userMessage: string, workspaceId: string, token: string | null, API_URL: string) => {
+    try {
+      const response = await fetch(`${API_URL}/workspaces/${workspaceId}/chat/stream`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          conversation_id: conversationId || undefined,
+          top_k: topK,
+          use_hybrid: useHybrid
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Chat request failed.");
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
+      let partialLine = "";
+      let assistantContent = "";
+      let citationsList: Citation[] = [];
+
+      // Insert placeholder assistant message that we stream into
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: "",
+        citations: [],
+        mode: "rag"
+      }]);
+
+      while (!done && reader) {
+        const { value, done: readerDone } = await reader.read();
+        done = readerDone;
+        const chunk = decoder.decode(value, { stream: !done });
+        const lines = (partialLine + chunk).split("\n");
+        partialLine = lines.pop() || "";
+
+        for (const line of lines) {
+          const cleaned = line.trim();
+          if (!cleaned.startsWith("data:")) continue;
+          const dataStr = cleaned.slice(5).trim();
+
+          if (dataStr === "[DONE]") {
+            done = true;
+            break;
+          }
+
+          try {
+            const parsed = JSON.parse(dataStr);
+            if (parsed.type === "token") {
+              assistantContent += parsed.content;
+              setMessages(prev => {
+                const updated = [...prev];
+                const lastMsg = updated[updated.length - 1];
+                if (lastMsg && lastMsg.role === "assistant") {
+                  lastMsg.content = assistantContent;
+                }
+                return updated;
+              });
+            } else if (parsed.type === "citations") {
+              citationsList = parsed.citations || [];
+              setMessages(prev => {
+                const updated = [...prev];
+                const lastMsg = updated[updated.length - 1];
+                if (lastMsg && lastMsg.role === "assistant") {
+                  lastMsg.citations = citationsList;
+                }
+                return updated;
+              });
+            }
+          } catch (err) {
+            // Ignore parsing errors
+          }
+        }
+      }
+    } catch (err: any) {
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: `API Error: ${err.message}`,
+        mode: "rag"
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Stream responder
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,166 +289,9 @@ function ChatContent() {
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
     if (mode === "agent") {
-      // ── Agent Orchestration Mode (LangGraph trace streaming) ──
-      try {
-        const response = await fetch(`${API_URL}/agent/orchestrate`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            workspace_id: workspaceId,
-            goal: userMessage,
-            max_steps: 10
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error("Agent pipeline failed to initialize.");
-        }
-
-        const reader = response.body?.getReader();
-        const decoder = new TextDecoder();
-        let done = false;
-        let partialLine = "";
-        let finalAnswer = "";
-        let localSteps: { node: string; content: string }[] = [];
-
-        while (!done && reader) {
-          const { value, done: readerDone } = await reader.read();
-          done = readerDone;
-          const chunk = decoder.decode(value, { stream: !done });
-          const lines = (partialLine + chunk).split("\n");
-          partialLine = lines.pop() || "";
-
-          for (const line of lines) {
-            const cleaned = line.trim();
-            if (!cleaned.startsWith("data:")) continue;
-            const dataStr = cleaned.slice(5).trim();
-            try {
-              const parsed = JSON.parse(dataStr);
-              if (parsed.event === "trace" || parsed.node) {
-                const stepNode = parsed.node || "system";
-                const stepContent = parsed.content || "";
-                localSteps.push({ node: stepNode, content: stepContent });
-                setAgentSteps([...localSteps]);
-              } else if (parsed.event === "final" || parsed.answer) {
-                finalAnswer = parsed.answer || "";
-              }
-            } catch (err) {
-              // Ignore partial JSON blocks
-            }
-          }
-        }
-
-        setMessages(prev => [...prev, {
-          role: "assistant",
-          content: finalAnswer || "Agent reasoning finalized.",
-          mode: "agent",
-          steps: localSteps
-        }]);
-
-      } catch (err: any) {
-        setMessages(prev => [...prev, { 
-          role: "assistant", 
-          content: `Agent System Error: ${err.message}`,
-          mode: "agent"
-        }]);
-      } finally {
-        setIsLoading(false);
-      }
-
+      await executeAgentMode(userMessage, workspaceId, token, API_URL);
     } else {
-      // ── Standard RAG Chat Mode (Stream response) ──
-      try {
-        const response = await fetch(`${API_URL}/workspaces/${workspaceId}/chat/stream`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            message: userMessage,
-            conversation_id: conversationId || undefined,
-            top_k: topK,
-            use_hybrid: useHybrid
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error("Chat request failed.");
-        }
-
-        const reader = response.body?.getReader();
-        const decoder = new TextDecoder();
-        let done = false;
-        let partialLine = "";
-        let assistantContent = "";
-        let citationsList: Citation[] = [];
-
-        // Insert placeholder assistant message that we stream into
-        setMessages(prev => [...prev, { 
-          role: "assistant", 
-          content: "", 
-          citations: [],
-          mode: "rag"
-        }]);
-
-        while (!done && reader) {
-          const { value, done: readerDone } = await reader.read();
-          done = readerDone;
-          const chunk = decoder.decode(value, { stream: !done });
-          const lines = (partialLine + chunk).split("\n");
-          partialLine = lines.pop() || "";
-
-          for (const line of lines) {
-            const cleaned = line.trim();
-            if (!cleaned.startsWith("data:")) continue;
-            const dataStr = cleaned.slice(5).trim();
-            
-            if (dataStr === "[DONE]") {
-              done = true;
-              break;
-            }
-
-            try {
-              const parsed = JSON.parse(dataStr);
-              if (parsed.type === "token") {
-                assistantContent += parsed.content;
-                setMessages(prev => {
-                  const updated = [...prev];
-                  const lastMsg = updated[updated.length - 1];
-                  if (lastMsg && lastMsg.role === "assistant") {
-                    lastMsg.content = assistantContent;
-                  }
-                  return updated;
-                });
-              } else if (parsed.type === "citations") {
-                citationsList = parsed.citations || [];
-                setMessages(prev => {
-                  const updated = [...prev];
-                  const lastMsg = updated[updated.length - 1];
-                  if (lastMsg && lastMsg.role === "assistant") {
-                    lastMsg.citations = citationsList;
-                  }
-                  return updated;
-                });
-              }
-            } catch (err) {
-              // Ignore parsing errors
-            }
-          }
-        }
-      } catch (err: any) {
-        setMessages(prev => [...prev, { 
-          role: "assistant", 
-          content: `API Error: ${err.message}`,
-          mode: "rag"
-        }]);
-      } finally {
-        setIsLoading(false);
-      }
+      await executeRagMode(userMessage, workspaceId, token, API_URL);
     }
   };
 
