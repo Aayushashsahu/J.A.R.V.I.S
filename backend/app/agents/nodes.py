@@ -1,12 +1,11 @@
 import os
 import logging
 import json
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from app.agents.service import (
     agent_llm_service,
     get_deterministic_planner_fallback,
     get_deterministic_retriever_fallback,
-    get_deterministic_verifier_fallback,
     get_deterministic_formatter_fallback
 )
 

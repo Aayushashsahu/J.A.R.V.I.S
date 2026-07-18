@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from typing import List
 
 from app.api import deps
 from app.db.models import User, MemoryTimelineEvent
@@ -21,7 +20,7 @@ def get_timeline(
     this_week = []
     older = []
     
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timezone
     now = datetime.now(timezone.utc)
     
     for event in events:

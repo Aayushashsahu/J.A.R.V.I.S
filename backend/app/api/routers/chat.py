@@ -5,7 +5,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import AsyncIterator, List, Optional
+from typing import AsyncIterator, List
 
 from app.api import deps
 from app.db.models import User, Workspace, Conversation, Message

@@ -1,4 +1,3 @@
-import os
 import asyncio
 from app.db.session import SessionLocal
 from app.db.models import Workspace, User
