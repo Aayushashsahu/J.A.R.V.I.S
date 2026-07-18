@@ -1,7 +1,6 @@
 import os
 import json
 import logging
-import uuid
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from openai import OpenAI
