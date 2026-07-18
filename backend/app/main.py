@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.config import settings
-from app.db.session import engine, Base
 from app.api.routers import auth, workspaces, documents, chat, brain, timeline, hud, explain, agent
 from app.services.file_watcher import start_watcher
 from app.services.batch_processor import run_batch_processor
@@ -22,7 +21,6 @@ async def lifespan(app: FastAPI):
     # Auto-create tables on startup (robust fallback for local execution / SQLite)
     try:
         from app.db.session import engine, Base
-        from app.db import models
         Base.metadata.create_all(bind=engine)
         logging.info("Database tables initialized successfully.")
     except Exception as db_err:
@@ -54,12 +52,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:4000",
-        "http://localhost:3000",
-        "http://127.0.0.1:4000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -74,6 +67,7 @@ app.include_router(timeline.router, prefix=f"{settings.API_V1_STR}", tags=["time
 app.include_router(hud.router, prefix=f"{settings.API_V1_STR}/hud", tags=["hud"])
 app.include_router(explain.router, prefix=f"{settings.API_V1_STR}", tags=["explain"])
 app.include_router(agent.router, prefix=f"{settings.API_V1_STR}", tags=["agent"])
+app.include_router(dashboard.router, prefix=f"{settings.API_V1_STR}/dashboard", tags=["dashboard"])
 
 @app.get("/")
 def root():

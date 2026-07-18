@@ -107,3 +107,4 @@ playwright-report/
 
 # --- Claude Code agent scratch (memory, hooks, transient) --------------------
 .claude/
+backend/venv/

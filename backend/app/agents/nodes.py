@@ -1,20 +1,18 @@
 import os
 import logging
 import json
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from app.agents.service import (
     agent_llm_service,
     get_deterministic_planner_fallback,
     get_deterministic_retriever_fallback,
-    get_deterministic_verifier_fallback,
     get_deterministic_formatter_fallback
 )
 
 logger = logging.getLogger(__name__)
 
-# TODO: Call the existing RAG/chat retriever instead of building a separate RAG system.
-# If the existing RAG service is not ready, fall back to mock citation-backed chunks.
 def retrieve_rag_documents(workspace_id: str, query: str) -> List[Dict[str, Any]]:
+    """Retrieve safety documents matching the query using the central retriever."""
     results = []
     
     # Skip real RAG if no valid Gemini API key is configured (avoids hanging on retries with mock key)
@@ -24,30 +22,23 @@ def retrieve_rag_documents(workspace_id: str, query: str) -> List[Dict[str, Any]
         return get_deterministic_retriever_fallback(query)
     
     try:
-        from app.services.llm_provider import llm_provider
-        from app.services.qdrant_service import qdrant_service
+        from app.services.retriever import retriever
         
-        # Generate embeddings using the existing LLM provider
-        embeddings = llm_provider.generate_embeddings([query])
-        if embeddings and len(embeddings) > 0:
-            # Search Qdrant via the existing qdrant_service
-            qdrant_hits = qdrant_service.search(
-                workspace_id=workspace_id,
-                query_embedding=embeddings[0],
-                limit=5
-            )
-            if qdrant_hits:
-                for hit in qdrant_hits:
-                    source = hit.payload.get('source_file', 'Unknown')
-                    content = hit.payload.get('content', '')
-                    score = hit.score if hasattr(hit, 'score') else 0.8
-                    results.append({
-                        "source": source,
-                        "content": content,
-                        "confidence": score
-                    })
+        # Call the existing RAG/chat retriever
+        chunks = retriever.retrieve(
+            query=query,
+            workspace_id=workspace_id,
+            top_k=5
+        )
+
+        for chunk in chunks:
+            results.append({
+                "source": chunk.source,
+                "content": chunk.text,
+                "confidence": chunk.score
+            })
     except Exception as e:
-        logger.warning(f"RAG Qdrant retrieval failed: {e}. Falling back to default mock data.")
+        logger.warning(f"RAG central retrieval failed: {e}. Falling back to default mock data.")
     
     # If no results were retrieved, fallback to deterministic mock chunks so the endpoint works
     if not results:
