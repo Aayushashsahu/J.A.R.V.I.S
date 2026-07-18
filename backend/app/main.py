@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.config import settings
-from app.api.routers import auth, workspaces, documents, chat, brain, timeline, hud, explain, agent
+from app.api.routers import auth, workspaces, documents, chat, brain, timeline, hud, explain, agent, dashboard
 from app.services.file_watcher import start_watcher
 from app.services.batch_processor import run_batch_processor
 from app.services.reflection_engine import run_reflection_engine
