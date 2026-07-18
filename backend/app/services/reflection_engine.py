@@ -15,6 +15,17 @@ async def run_reflection_engine():
         try:
             # Pick up "generate_reflection" tasks
             tasks = db.query(QueuedTask).filter(QueuedTask.status == "pending", QueuedTask.task_type == "generate_reflection").limit(5).all()
+
+            # Pre-fetch workspaces for tasks that need them (N+1 query optimization)
+            user_ids_for_tasks = {task.user_id for task in tasks}
+            user_workspaces = {}
+            if user_ids_for_tasks:
+                workspaces = db.query(Workspace).filter(Workspace.user_id.in_(user_ids_for_tasks)).all()
+                # Use the first workspace found for each user
+                for ws in workspaces:
+                    if ws.user_id not in user_workspaces:
+                        user_workspaces[ws.user_id] = ws.id
+
             for task in tasks:
                 try:
                     payload = json.loads(task.payload)
@@ -23,8 +34,7 @@ async def run_reflection_engine():
                     document_id = payload.get("document_id")
                     
                     if not workspace_id:
-                        ws = db.query(Workspace).filter(Workspace.user_id == task.user_id).first()
-                        workspace_id = ws.id if ws else "default"
+                        workspace_id = user_workspaces.get(task.user_id, "default")
 
                     prompt = f"""
                     Analyze recent memories and entities to form a high-level reflection about the user.
