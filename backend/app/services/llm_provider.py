@@ -3,7 +3,7 @@ from typing import Iterator, List
 import os
 from google import genai
 from app.core.config import settings
-from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+from tenacity import retry, wait_exponential, stop_after_attempt
 
 class BaseLLMProvider(ABC):
     @abstractmethod
