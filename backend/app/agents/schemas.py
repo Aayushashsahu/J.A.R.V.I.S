@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional, Union
+from typing import List, Optional
 
 class AgentOrchestrateRequest(BaseModel):
     workspace_id: str = Field(..., min_length=1, description="Workspace ID is required and cannot be empty")
