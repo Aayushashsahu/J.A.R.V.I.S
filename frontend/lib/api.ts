@@ -1,5 +1,24 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
+async function handleResponseError(res: Response, endpoint: string) {
+  const text = await res.text();
+  console.log(`[API Error] POST/GET ${endpoint} Status:`, res.status);
+  console.log(`[API Error] Headers:`, [...res.headers.entries()]);
+  console.log(`[API Error] Body:`, text);
+
+  let errorDetail = 'API Request Failed';
+  try {
+    const errorObj = JSON.parse(text);
+    errorDetail = errorObj.error || errorObj.detail || errorDetail;
+    if (errorObj.traceback) {
+      console.error(`[API Error Traceback]:`, errorObj.traceback);
+    }
+  } catch (e) {
+    console.warn("Response body is not JSON:", text);
+  }
+  throw new Error(errorDetail);
+}
+
 export const api = {
   async get(endpoint: string) {
     const token = localStorage.getItem('token');
@@ -12,8 +31,7 @@ export const api = {
       headers
     });
     if (!res.ok) {
-      const error = await res.json().catch(() => ({}));
-      throw new Error(error.detail || 'API Request Failed');
+      return handleResponseError(res, endpoint);
     }
     return res.json();
   },
@@ -32,8 +50,7 @@ export const api = {
       body: JSON.stringify(body)
     });
     if (!res.ok) {
-        const error = await res.json().catch(() => ({}));
-        throw new Error(error.detail || 'API Request Failed');
+      return handleResponseError(res, endpoint);
     }
     return res.json();
   },
@@ -67,9 +84,7 @@ export const api = {
       console.log(`[API Response] POST ${endpoint} status: ${res.status}`);
 
       if (!res.ok) {
-        const error = await res.json().catch(() => ({}));
-        console.error(`[API Error Response] POST ${endpoint} body:`, error);
-        throw new Error(error.detail || 'API Request Failed');
+        return handleResponseError(res, endpoint);
       }
       
       const data = await res.json();

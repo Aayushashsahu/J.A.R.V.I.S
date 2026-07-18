@@ -86,6 +86,14 @@ async def upload_document(
     except Exception as e:
         logger.error(f"[Ingestion] Ingestion failed for {safe_filename}")
         logger.error(f"[Ingestion] Failure traceback:\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"Failed to process document: {str(e)}")
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": f"Failed to process document: {str(e)}",
+                "type": type(e).__name__,
+                "traceback": traceback.format_exc()
+            }
+        )
 
     return {"message": "Document uploaded and processed successfully", "document_id": doc.id}
