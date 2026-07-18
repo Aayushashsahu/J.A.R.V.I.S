@@ -23,7 +23,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env"))
 
 from app.db.session import Base
-from app.db import models
+from app.db import models  # noqa: F401
 from app.core.config import settings
 
 target_metadata = Base.metadata
