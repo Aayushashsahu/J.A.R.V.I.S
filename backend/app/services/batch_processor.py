@@ -168,27 +168,29 @@ def process_markdown_task(db: Session, task: QueuedTask):
         try:
             data = _extract_entities_via_llm(parsed['content'])
             
-            # Pre-fetch existing PKM Entities to avoid N+1 queries
-            pkm_entities_data = data.get("pkm_entities", [])
-            unique_pkm_values = {p.get("value", "").strip().lower() for p in pkm_entities_data if p.get("value", "").strip()}
+            # Batch PKM Entities lookup
+            pkm_values = [pkm.get("value", "").strip() for pkm in data.get("pkm_entities", []) if pkm.get("value", "").strip()]
+            pkm_values_clean = [v.lower() for v in pkm_values]
 
-            pkm_dict = {}
-            if unique_pkm_values:
-                existing_pkms = db.query(PKMEntity).filter(
+            existing_pkms = {}
+            if pkm_values_clean:
+                existing_pkm_query = db.query(PKMEntity).filter(
                     PKMEntity.user_id == task.user_id,
-                    func.lower(func.trim(PKMEntity.value)).in_(unique_pkm_values)
+                    func.lower(func.trim(PKMEntity.value)).in_(pkm_values_clean)
                 ).all()
-                pkm_dict = {p.value.strip().lower(): p for p in existing_pkms if p.value}
+                existing_pkms = {pkm.value.strip().lower(): pkm for pkm in existing_pkm_query}
 
-            for pkm in pkm_entities_data:
+            new_pkms_to_add = []
+            new_kg_nodes_to_add = []
+
+            for pkm in data.get("pkm_entities", []):
                 value = pkm.get("value", "").strip()
                 if not value: continue
-                # Deduplication
                 value_clean = value.lower()
-                existing = pkm_dict.get(value_clean)
 
+                existing = existing_pkms.get(value_clean)
                 if existing:
-                    existing.confidence = min(100, existing.confidence + 5) # Aggregate confidence
+                    existing.confidence = min(100, existing.confidence + 5)
                 else:
                     new_pkm = PKMEntity(
                         user_id=task.user_id,
@@ -200,44 +202,53 @@ def process_markdown_task(db: Session, task: QueuedTask):
                         priority=2
                     )
                     db.add(new_pkm)
-                    db.flush() # Flush to get ID without committing transaction
-                    # Graph Node
-                    db.add(KnowledgeGraphNode(user_id=task.user_id, node_type="PKMEntity", node_id=new_pkm.id))
-                    # Add to dictionary so we don't recreate it if there are duplicates in this same payload
-                    pkm_dict[value_clean] = new_pkm
-                
-            # Pre-fetch existing Entities to avoid N+1 queries
-            entities_data = data.get("entities", [])
-            unique_ent_names = {e.get("name", "").strip().lower() for e in entities_data if e.get("name", "").strip()}
+                    new_pkms_to_add.append(new_pkm)
+                    existing_pkms[value_clean] = new_pkm
+                    # Note: we need the ID for KnowledgeGraphNode. We can flush the session to get IDs.
 
-            ent_dict = {}
-            if unique_ent_names:
-                existing_ents = db.query(Entity).filter(
+            db.flush() # get IDs for new PKMs
+
+            for new_pkm in new_pkms_to_add:
+                new_kg_nodes_to_add.append(KnowledgeGraphNode(user_id=task.user_id, node_type="PKMEntity", node_id=new_pkm.id))
+
+            # Batch Entities lookup
+            ent_names = [ent.get("name", "").strip() for ent in data.get("entities", []) if ent.get("name", "").strip()]
+            ent_names_clean = [n.lower() for n in ent_names]
+
+            existing_ents = {}
+            if ent_names_clean:
+                existing_ent_query = db.query(Entity).filter(
                     Entity.user_id == task.user_id,
-                    func.lower(func.trim(Entity.name)).in_(unique_ent_names)
+                    func.lower(func.trim(Entity.name)).in_(ent_names_clean)
                 ).all()
-                ent_dict = {e.name.strip().lower(): e for e in existing_ents if e.name}
+                existing_ents = {ent.name.strip().lower(): ent for ent in existing_ent_query}
 
-            for ent in entities_data:
+            new_ents_to_add = []
+
+            for ent in data.get("entities", []):
                 name = ent.get("name", "").strip()
                 if not name: continue
-                # Deduplication
                 name_clean = name.lower()
-                existing = ent_dict.get(name_clean)
 
-                if not existing:
+                if name_clean not in existing_ents:
                     new_ent = Entity(
                         user_id=task.user_id,
                         type=ent.get("type", "Concept"),
                         name=name
                     )
                     db.add(new_ent)
-                    db.flush() # Flush to get ID without committing transaction
-                    # Graph Node
-                    db.add(KnowledgeGraphNode(user_id=task.user_id, node_type="Entity", node_id=new_ent.id))
-                    # Add to dictionary so we don't recreate it if there are duplicates in this same payload
-                    ent_dict[name_clean] = new_ent
-                
+                    new_ents_to_add.append(new_ent)
+                    # We add to existing_ents to avoid inserting duplicate names from the same batch
+                    existing_ents[name_clean] = new_ent
+
+            db.flush() # get IDs for new Entities
+
+            for new_ent in new_ents_to_add:
+                new_kg_nodes_to_add.append(KnowledgeGraphNode(user_id=task.user_id, node_type="Entity", node_id=new_ent.id))
+
+            for kg_node in new_kg_nodes_to_add:
+                db.add(kg_node)
+
             db.commit()
             
             # Embed into Qdrant for Retrieval
