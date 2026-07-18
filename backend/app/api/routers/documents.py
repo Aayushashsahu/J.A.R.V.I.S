@@ -55,22 +55,24 @@ async def upload_document(
     db.refresh(doc)
 
     # Process Document
+    import logging
+    import traceback
+    logger = logging.getLogger(__name__)
+
+    logger.info(f"[Ingestion] Received file: {safe_filename}, size: {len(content)} bytes, workspace_id: {workspace_id}")
     try:
-        # process_with_metadata() returns List[ChunkMetadata] — each object
-        # carries text, chunk_index, page_number, and clause_id.
-        # For PDFs the page_number is the physical PDF page (1-based).
-        # For txt/md/docx it is None (those formats have no stable page concept).
+        logger.info(f"[Ingestion] Stage 1/3: Text extraction and metadata parsing for {safe_filename}")
         chunk_metadata = DocumentProcessor.process_with_metadata(safe_filename, content)
 
         texts       = [cm.text        for cm in chunk_metadata]
         page_nums   = [cm.page_number for cm in chunk_metadata]
         clause_ids  = [cm.clause_id   for cm in chunk_metadata]
 
+        logger.info(f"[Ingestion] Stage 2/3: Generating embeddings for {len(texts)} chunks using GeminiProvider")
         # Generate Embeddings
         embeddings = llm_provider.generate_embeddings(texts)
 
-        # Insert into Qdrant — source_file is now correctly passed (fixes P0 bug),
-        # and all metadata fields are forwarded so retrieval needs no DB lookups.
+        logger.info(f"[Ingestion] Stage 3/3: Inserting vector embeddings and chunks into Qdrant database")
         qdrant_service.insert_chunks(
             workspace_id=workspace_id,
             document_id=doc.id,
@@ -80,8 +82,10 @@ async def upload_document(
             page_numbers=page_nums,
             clause_ids=clause_ids,
         )
+        logger.info(f"[Ingestion] Ingestion pipeline completed successfully for {safe_filename}")
     except Exception as e:
-        # We might want to mark the document as failed in a real app
+        logger.error(f"[Ingestion] Ingestion failed for {safe_filename}")
+        logger.error(f"[Ingestion] Failure traceback:\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Failed to process document: {str(e)}")
 
     return {"message": "Document uploaded and processed successfully", "document_id": doc.id}

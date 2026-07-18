@@ -274,6 +274,16 @@ function InspectPanel({ selectedFile }: { selectedFile: UploadingFile | null }) 
                 </div>
               </div>
 
+                  {/* Ingestion Failure Alerts */}
+                  {selectedFile.status === "error" && (
+                    <div className="bg-destructive/15 text-destructive rounded-xl p-3.5 border border-destructive/20 text-xs space-y-1 my-3">
+                      <span className="font-semibold block text-[11px]">⚠️ Ingestion Failure Details</span>
+                      <p className="text-[10px] text-muted-foreground leading-normal break-words font-mono bg-background/50 p-2 rounded border border-border/20 max-h-[120px] overflow-y-auto">
+                        {selectedFile.error || "An unknown error occurred during document processing."}
+                      </p>
+                    </div>
+                  )}
+
                   {/* Processing Ingestion Pipeline Visualization */}
                   <div className="space-y-2 pt-4 border-t border-border/30">
                     <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground block">Processing Pipeline State</span>

@@ -46,13 +46,19 @@ class GeminiProvider(BaseLLMProvider):
             )
         self.nvidia_model = "meta/llama-3.1-70b-instruct"
 
-    @retry(wait=wait_exponential(multiplier=1, min=2, max=10), stop=stop_after_attempt(5))
+    @retry(wait=wait_exponential(multiplier=1, min=2, max=10), stop=stop_after_attempt(5), reraise=True)
     def _generate_text_gemini(self, full_prompt: str) -> str:
-        response = self.client.models.generate_content(
-            model=self.model,
-            contents=full_prompt
-        )
-        return response.text
+        self.logger.info(f"[External API Request] Gemini generate_content model: {self.model}")
+        try:
+            response = self.client.models.generate_content(
+                model=self.model,
+                contents=full_prompt
+            )
+            self.logger.info(f"[External API Response] Gemini generate_content success")
+            return response.text
+        except Exception as e:
+            self.logger.error(f"[External API Error] Gemini generate_content failed: {str(e)}")
+            raise e
 
     def generate_text(self, prompt: str, system_prompt: str = None) -> str:
         full_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
@@ -124,19 +130,25 @@ class GeminiProvider(BaseLLMProvider):
                 self.logger.error(f"NVIDIA fallback also failed: {nvidia_e}")
                 raise nvidia_e
 
-    @retry(wait=wait_exponential(multiplier=1, min=2, max=10), stop=stop_after_attempt(5))
+    @retry(wait=wait_exponential(multiplier=1, min=2, max=10), stop=stop_after_attempt(5), reraise=True)
     def generate_embeddings(self, texts: List[str]) -> List[List[float]]:
         # NO FALLBACK FOR EMBEDDINGS (As requested)
         from google.genai import types
+        self.logger.info(f"[External API Request] Gemini embed_content model: {self.embedding_model}, texts count: {len(texts)}")
         embeddings = []
-        for text in texts:
-            result = self.client.models.embed_content(
-                model=self.embedding_model,
-                contents=text,
-                config=types.EmbedContentConfig(output_dimensionality=768)
-            )
-            embeddings.append(result.embeddings[0].values)
-        return embeddings
+        try:
+            for text in texts:
+                result = self.client.models.embed_content(
+                    model=self.embedding_model,
+                    contents=text,
+                    config=types.EmbedContentConfig(output_dimensionality=768)
+                )
+                embeddings.append(result.embeddings[0].values)
+            self.logger.info(f"[External API Response] Gemini embed_content success, generated {len(embeddings)} vectors")
+            return embeddings
+        except Exception as e:
+            self.logger.error(f"[External API Error] Gemini embed_content failed: {str(e)}")
+            raise e
 
 class LLMProviderFactory:
     @staticmethod
