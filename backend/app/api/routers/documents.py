@@ -1,4 +1,5 @@
 import os
+import anyio
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from sqlalchemy.orm import Session
 from app.api import deps
@@ -36,9 +37,9 @@ async def upload_document(
         raise HTTPException(status_code=400, detail="Invalid filename")
 
     # Save file locally
-    file_path = os.path.join(UPLOAD_DIR, safe_filename)
-    with open(file_path, "wb") as f:
-        f.write(content)
+    file_path = os.path.join(UPLOAD_DIR, file.filename)
+    async with await anyio.open_file(file_path, "wb") as f:
+        await f.write(content)
 
     # Save to DB
     ext = safe_filename.split('.')[-1].lower()
