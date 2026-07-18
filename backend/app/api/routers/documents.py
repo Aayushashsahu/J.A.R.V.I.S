@@ -1,6 +1,7 @@
 import os
 import anyio
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from app.api import deps
 from app.db.models import User, Workspace, Document
@@ -86,13 +87,13 @@ async def upload_document(
     except Exception as e:
         logger.error(f"[Ingestion] Ingestion failed for {safe_filename}")
         logger.error(f"[Ingestion] Failure traceback:\n{traceback.format_exc()}")
-        from fastapi.responses import JSONResponse
         return JSONResponse(
             status_code=500,
             content={
                 "error": f"Failed to process document: {str(e)}",
-                "type": type(e).__name__,
-                "traceback": traceback.format_exc()
+                "exception_type": type(e).__name__,
+                "traceback": traceback.format_exc(),
+                "status": 500
             }
         )
 

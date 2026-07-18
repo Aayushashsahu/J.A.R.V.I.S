@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
 from typing import Iterator, List
 import os
+import logging
 from google import genai
 from app.core.config import settings
-from tenacity import retry, wait_exponential, stop_after_attempt
+from tenacity import retry, wait_exponential, stop_after_attempt, before_sleep_log
+
+logger = logging.getLogger(__name__)
 
 class BaseLLMProvider(ABC):
     @abstractmethod
@@ -46,7 +49,7 @@ class GeminiProvider(BaseLLMProvider):
             )
         self.nvidia_model = "meta/llama-3.1-70b-instruct"
 
-    @retry(wait=wait_exponential(multiplier=1, min=2, max=10), stop=stop_after_attempt(5), reraise=True)
+    @retry(wait=wait_exponential(multiplier=1, min=2, max=10), stop=stop_after_attempt(5), reraise=True, before_sleep=before_sleep_log(logger, logging.WARNING))
     def _generate_text_gemini(self, full_prompt: str) -> str:
         self.logger.info(f"[External API Request] Gemini generate_content model: {self.model}")
         try:
@@ -130,7 +133,7 @@ class GeminiProvider(BaseLLMProvider):
                 self.logger.error(f"NVIDIA fallback also failed: {nvidia_e}")
                 raise nvidia_e
 
-    @retry(wait=wait_exponential(multiplier=1, min=2, max=10), stop=stop_after_attempt(5), reraise=True)
+    @retry(wait=wait_exponential(multiplier=1, min=2, max=10), stop=stop_after_attempt(5), reraise=True, before_sleep=before_sleep_log(logger, logging.WARNING))
     def generate_embeddings(self, texts: List[str]) -> List[List[float]]:
         # NO FALLBACK FOR EMBEDDINGS (As requested)
         from google.genai import types

@@ -10,6 +10,9 @@ async function handleResponseError(res: Response, endpoint: string) {
   try {
     const errorObj = JSON.parse(text);
     errorDetail = errorObj.error || errorObj.detail || errorDetail;
+    if (errorObj.exception_type) {
+      console.error(`[API Exception Type]:`, errorObj.exception_type);
+    }
     if (errorObj.traceback) {
       console.error(`[API Error Traceback]:`, errorObj.traceback);
     }
