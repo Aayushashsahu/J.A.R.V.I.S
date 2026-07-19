@@ -115,38 +115,38 @@ class QdrantService:
         """
         Vector similarity search filtered by workspace.
 
-        Uses query_points() which is the current API for qdrant-client >= 1.7.
-        Falls back to the legacy client.search() for older versions.
-        Handles both QueryResponse objects (with .points) and plain lists.
+        Uses the Qdrant REST API /points/search endpoint directly
+        for maximum compatibility across Qdrant server versions.
         """
-        query_filter = Filter(
-            must=[
-                FieldCondition(
-                    key="workspace_id",
-                    match=MatchValue(value=workspace_id)
-                )
-            ]
-        )
-        result = None
-        if hasattr(self.client, 'query_points'):
-            result = self.client.query_points(
-                collection_name=self.collection_name,
-                query=query_embedding,
-                query_filter=query_filter,
-                limit=limit,
-            )
-        elif hasattr(self.client, 'search'):
-            result = self.client.search(
-                collection_name=self.collection_name,
-                query_vector=query_embedding,
-                query_filter=query_filter,
-                limit=limit,
-            )
-        # Handle both QueryResponse (has .points attr) and plain list
-        if result is None:
+        import logging
+        logger = logging.getLogger(__name__)
+        try:
+            import requests
+            url = f"http://{settings.QDRANT_HOST}:{settings.QDRANT_PORT}/collections/{self.collection_name}/points/search"
+            payload = {
+                "vector": query_embedding,
+                "limit": limit,
+                "filter": {
+                    "must": [
+                        {"key": "workspace_id", "match": {"value": workspace_id}}
+                    ]
+                },
+                "with_payload": True
+            }
+            resp = requests.post(url, json=payload, timeout=10)
+            if resp.status_code != 200:
+                logger.error(f"Qdrant search returned {resp.status_code}: {resp.text[:200]}")
+                return []
+            data = resp.json().get("result", [])
+            # Convert to objects with .id, .payload, .score attributes
+            class Hit:
+                def __init__(self, d):
+                    self.id = d.get("id")
+                    self.payload = d.get("payload", {})
+                    self.score = d.get("score", 0.0)
+            return [Hit(d) for d in data]
+        except Exception as e:
+            logger.error(f"Qdrant search failed: {e}", exc_info=True)
             return []
-        if hasattr(result, 'points'):
-            return result.points
-        return list(result)
 
 qdrant_service = QdrantService()
