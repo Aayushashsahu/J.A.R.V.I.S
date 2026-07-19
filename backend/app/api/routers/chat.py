@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 from fastapi import APIRouter, Depends, HTTPException
@@ -152,7 +151,10 @@ async def chat(
             prompt=request.message,
             system_prompt=system_prompt
         )
-    except (Exception, asyncio.CancelledError) as e:
+    except BaseException as e:
+        # Catch all exceptions including anyio.CancelledError and asyncio.CancelledError
+        if isinstance(e, (KeyboardInterrupt, SystemExit)):
+            raise
         logger.error(f"LLM Generation completely failed: {type(e).__name__}: {e}", exc_info=True)
         # Deep Fallback Mode (If both Gemini and NVIDIA fail)
         assistant_response_text = (
@@ -166,11 +168,11 @@ async def chat(
             "Raw Memory Dump:\n" + context_str
         )
 
-    # Save assistant message — never save None to DB
+    # Save assistant message
     assistant_msg = Message(
         conversation_id=conversation_id,
         role="assistant",
-        content=assistant_response_text or "No response generated."
+        content=assistant_response_text
     )
     db.add(assistant_msg)
     db.commit()
@@ -363,7 +365,9 @@ async def chat_stream(
                 event = json.dumps({"type": "token", "content": fragment})
                 yield f"data: {event}\n\n"
 
-        except (Exception, asyncio.CancelledError) as exc:
+        except BaseException as exc:
+            if isinstance(exc, (KeyboardInterrupt, SystemExit)):
+                raise
             stream_logger.error("LLM stream failed: %s: %s", type(exc).__name__, exc, exc_info=True)
             fallback = "J.A.R.V.I.S. streaming is temporarily unavailable."
             full_response_parts.append(fallback)
