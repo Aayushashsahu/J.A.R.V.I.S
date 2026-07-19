@@ -1,8 +1,10 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 function handle401() {
-  // Clear stale token and redirect to login
+  // Clear stale token and redirect to login (idempotent — safe for concurrent 401s)
   if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('token');
+    if (!token) return; // Already cleared by a previous 401 — skip redundant redirect
     localStorage.removeItem('token');
     window.location.href = '/login';
   }
