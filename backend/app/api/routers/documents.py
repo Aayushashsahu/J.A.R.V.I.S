@@ -75,7 +75,7 @@ async def upload_document(
         embeddings = llm_provider.generate_embeddings(texts)
         logger.info(f"[Ingestion] Stage 2/3 complete: generated {len(embeddings)} embedding vectors")
 
-        logger.info(f"[Ingestion] Stage 3/3: Inserting vector embeddings and chunks into Qdrant database")
+        logger.info("[Ingestion] Stage 3/3: Inserting vector embeddings and chunks into Qdrant database")
         qdrant_service.insert_chunks(
             workspace_id=workspace_id,
             document_id=doc.id,

@@ -35,6 +35,7 @@ _qdrant_client_mock = MagicMock()
 _qdrant_client_mock.get_collection.return_value = MagicMock()
 _qdrant_client_mock.upsert.return_value = MagicMock()
 _qdrant_client_mock.search.return_value = []
+_qdrant_client_mock.query_points.return_value = MagicMock(points=[])
 _qdrant_client_mock.scroll.return_value = ([], None)
 
 _patch_qdrant = patch(

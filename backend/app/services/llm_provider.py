@@ -84,7 +84,7 @@ class GeminiProvider(BaseLLMProvider):
                 model=self.model,
                 contents=full_prompt
             )
-            self.logger.info(f"[External API Response] Gemini generate_content success")
+            self.logger.info("[External API Response] Gemini generate_content success")
             return response.text
         except Exception as e:
             self.logger.error(f"[External API Error] Gemini generate_content failed: {str(e)}")

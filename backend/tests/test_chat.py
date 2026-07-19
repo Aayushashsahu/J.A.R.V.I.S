@@ -64,7 +64,7 @@ class TestChatResponseShape:
         qdrant_mock: MagicMock,
     ):
         """POST /chat must return HTTP 200."""
-        qdrant_mock.search.return_value = []
+        qdrant_mock.query_points.return_value = MagicMock(points=[])
         resp = client.post(
             f"/api/v1/workspaces/{workspace_id}/chat",
             headers=auth_headers,
@@ -80,7 +80,7 @@ class TestChatResponseShape:
         qdrant_mock: MagicMock,
     ):
         """ChatResponse must contain conversation_id, message, and citations."""
-        qdrant_mock.search.return_value = []
+        qdrant_mock.query_points.return_value = MagicMock(points=[])
         resp = client.post(
             f"/api/v1/workspaces/{workspace_id}/chat",
             headers=auth_headers,
@@ -100,7 +100,7 @@ class TestChatResponseShape:
         qdrant_mock: MagicMock,
     ):
         """citations must be [] when Qdrant returns no hits."""
-        qdrant_mock.search.return_value = []
+        qdrant_mock.query_points.return_value = MagicMock(points=[])
         resp = client.post(
             f"/api/v1/workspaces/{workspace_id}/chat",
             headers=auth_headers,
@@ -128,7 +128,7 @@ class TestCitationSchema:
         These fields map directly to what was stored in the Qdrant payload by
         the updated insert_chunks() method in Step 3.
         """
-        qdrant_mock.search.return_value = [_mock_hit()]
+        qdrant_mock.query_points.return_value = MagicMock(points=[_mock_hit()])
         resp = client.post(
             f"/api/v1/workspaces/{workspace_id}/chat",
             headers=auth_headers,
@@ -152,7 +152,7 @@ class TestCitationSchema:
         qdrant_mock: MagicMock,
     ):
         """Citation.source must match the source_file stored in the payload."""
-        qdrant_mock.search.return_value = [_mock_hit(source_file="OISD-118.pdf")]
+        qdrant_mock.query_points.return_value = MagicMock(points=[_mock_hit(source_file="OISD-118.pdf")])
         resp = client.post(
             f"/api/v1/workspaces/{workspace_id}/chat",
             headers=auth_headers,
@@ -170,7 +170,7 @@ class TestCitationSchema:
         qdrant_mock: MagicMock,
     ):
         """Citation.page must match the page_number stored in the Qdrant payload."""
-        qdrant_mock.search.return_value = [_mock_hit(page_number=7)]
+        qdrant_mock.query_points.return_value = MagicMock(points=[_mock_hit(page_number=7)])
         resp = client.post(
             f"/api/v1/workspaces/{workspace_id}/chat",
             headers=auth_headers,
@@ -188,7 +188,7 @@ class TestCitationSchema:
         qdrant_mock: MagicMock,
     ):
         """Citation.clause_id must match the clause_id stored in the Qdrant payload."""
-        qdrant_mock.search.return_value = [_mock_hit(clause_id="Section 4.2")]
+        qdrant_mock.query_points.return_value = MagicMock(points=[_mock_hit(clause_id="Section 4.2")])
         resp = client.post(
             f"/api/v1/workspaces/{workspace_id}/chat",
             headers=auth_headers,
@@ -207,7 +207,7 @@ class TestCitationSchema:
     ):
         """Citation.snippet must be at most 200 characters."""
         long_text = "X" * 500
-        qdrant_mock.search.return_value = [_mock_hit(text=long_text)]
+        qdrant_mock.query_points.return_value = MagicMock(points=[_mock_hit(text=long_text)])
         resp = client.post(
             f"/api/v1/workspaces/{workspace_id}/chat",
             headers=auth_headers,
@@ -225,7 +225,7 @@ class TestCitationSchema:
         qdrant_mock: MagicMock,
     ):
         """Chunks with source == 'Unknown' must not appear in citations."""
-        qdrant_mock.search.return_value = [
+        qdrant_mock.query_points.return_value = [
             _mock_hit(chunk_id="known", source_file="doc.pdf"),
             _mock_hit(chunk_id="unknown", source_file="Unknown"),
         ]
@@ -258,7 +258,7 @@ class TestChatBackwardCompatibility:
         without deeper mocking, but we can verify the request itself succeeds
         and returns the expected shape.
         """
-        qdrant_mock.search.return_value = []
+        qdrant_mock.query_points.return_value = MagicMock(points=[])
         resp = client.post(
             f"/api/v1/workspaces/{workspace_id}/chat",
             headers=auth_headers,
@@ -278,7 +278,7 @@ class TestChatBackwardCompatibility:
 
         Verify scroll() is NOT called (dense-only path).
         """
-        qdrant_mock.search.return_value = []
+        qdrant_mock.query_points.return_value = MagicMock(points=[])
         qdrant_mock.scroll.reset_mock()
         resp = client.post(
             f"/api/v1/workspaces/{workspace_id}/chat",
@@ -300,7 +300,7 @@ class TestChatBackwardCompatibility:
 
         Must return 200 with valid response shape — no 422 Unprocessable Entity.
         """
-        qdrant_mock.search.return_value = []
+        qdrant_mock.query_points.return_value = MagicMock(points=[])
         resp = client.post(
             f"/api/v1/workspaces/{workspace_id}/chat",
             headers=auth_headers,
@@ -327,7 +327,7 @@ class TestChatRetrievalControls:
         qdrant_mock: MagicMock,
     ):
         """use_hybrid=true in the request body must trigger a Qdrant scroll()."""
-        qdrant_mock.search.return_value = []
+        qdrant_mock.query_points.return_value = MagicMock(points=[])
         qdrant_mock.scroll.reset_mock()
         qdrant_mock.scroll.return_value = ([], None)
 
@@ -350,7 +350,7 @@ class TestChatRetrievalControls:
         qdrant_mock: MagicMock,
     ):
         """use_hybrid=false must use dense-only path (no scroll)."""
-        qdrant_mock.search.return_value = []
+        qdrant_mock.query_points.return_value = MagicMock(points=[])
         qdrant_mock.scroll.reset_mock()
         resp = client.post(
             f"/api/v1/workspaces/{workspace_id}/chat",

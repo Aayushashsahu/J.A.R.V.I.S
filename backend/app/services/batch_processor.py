@@ -68,7 +68,8 @@ def _extract_entities_via_llm(content: str) -> dict:
 def _process_pkm_entities(db: Session, user_id: str, pkm_entities_data: list, filename: str):
     for pkm in pkm_entities_data:
         value = pkm.get("value", "").strip()
-        if not value: continue
+        if not value:
+            continue
         # Deduplication
         value_clean = value.strip().lower()
         existing = db.query(PKMEntity).filter(
@@ -97,7 +98,8 @@ def _process_pkm_entities(db: Session, user_id: str, pkm_entities_data: list, fi
 def _process_general_entities(db: Session, user_id: str, entities_data: list):
     for ent in entities_data:
         name = ent.get("name", "").strip()
-        if not name: continue
+        if not name:
+            continue
         # Deduplication
         name_clean = name.strip().lower()
         existing = db.query(Entity).filter(
@@ -185,7 +187,8 @@ def process_markdown_task(db: Session, task: QueuedTask):
 
             for pkm in data.get("pkm_entities", []):
                 value = pkm.get("value", "").strip()
-                if not value: continue
+                if not value:
+                    continue
                 value_clean = value.lower()
 
                 existing = existing_pkms.get(value_clean)
@@ -227,7 +230,8 @@ def process_markdown_task(db: Session, task: QueuedTask):
 
             for ent in data.get("entities", []):
                 name = ent.get("name", "").strip()
-                if not name: continue
+                if not name:
+                    continue
                 name_clean = name.lower()
 
                 if name_clean not in existing_ents:

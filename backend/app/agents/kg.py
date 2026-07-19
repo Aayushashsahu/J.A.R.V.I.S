@@ -101,7 +101,7 @@ class KnowledgeGraphManager:
                 if run.sources_json:
                     try:
                         sources = json.loads(run.sources_json)
-                    except:
+                    except Exception:
                         pass
                 self.update_graph_from_run(run.goal, sources)
         except Exception:

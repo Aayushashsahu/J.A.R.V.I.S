@@ -112,19 +112,41 @@ class QdrantService:
         )
 
     def search(self, workspace_id: str, query_embedding: list[float], limit: int = 5):
-        search_result = self.client.search(
-            collection_name=self.collection_name,
-            query_vector=query_embedding,
-            query_filter=Filter(
-                must=[
-                    FieldCondition(
-                        key="workspace_id",
-                        match=MatchValue(value=workspace_id)
-                    )
-                ]
-            ),
-            limit=limit
+        """
+        Vector similarity search filtered by workspace.
+
+        Uses query_points() which is the current API for qdrant-client >= 1.7.
+        Falls back to the legacy client.search() for older versions.
+        Handles both QueryResponse objects (with .points) and plain lists.
+        """
+        query_filter = Filter(
+            must=[
+                FieldCondition(
+                    key="workspace_id",
+                    match=MatchValue(value=workspace_id)
+                )
+            ]
         )
-        return search_result
+        result = None
+        if hasattr(self.client, 'query_points'):
+            result = self.client.query_points(
+                collection_name=self.collection_name,
+                query=query_embedding,
+                query_filter=query_filter,
+                limit=limit,
+            )
+        elif hasattr(self.client, 'search'):
+            result = self.client.search(
+                collection_name=self.collection_name,
+                query_vector=query_embedding,
+                query_filter=query_filter,
+                limit=limit,
+            )
+        # Handle both QueryResponse (has .points attr) and plain list
+        if result is None:
+            return []
+        if hasattr(result, 'points'):
+            return result.points
+        return list(result)
 
 qdrant_service = QdrantService()
