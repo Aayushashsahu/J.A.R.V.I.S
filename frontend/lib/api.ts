@@ -1,6 +1,21 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
+function handle401() {
+  // Clear stale token and redirect to login
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('token');
+    window.location.href = '/login';
+  }
+}
+
 async function handleResponseError(res: Response, endpoint: string) {
+  // Handle 401 Unauthorized — stale or invalid token
+  if (res.status === 401) {
+    console.warn(`[API Auth] 401 on ${endpoint} — clearing token and redirecting to login`);
+    handle401();
+    throw new Error('Session expired. Please log in again.');
+  }
+
   const text = await res.text();
   console.log(`[API Error] POST/GET ${endpoint} Status:`, res.status);
   console.log(`[API Error] Headers:`, [...res.headers.entries()]);
