@@ -62,20 +62,19 @@ async def upload_document(
     # Process Document
     logger.info(f"[Ingestion] Received file: {safe_filename}, size: {len(content)} bytes, workspace_id: {workspace_id}")
     try:
-        logger.info(f"[Ingestion] Stage 1/3: Text extraction and metadata parsing for {safe_filename}")
+        logger.info(f"[Ingestion] Stage 1/5: Text extraction and metadata parsing for {safe_filename}")
         chunk_metadata = DocumentProcessor.process_with_metadata(safe_filename, content)
-        logger.info(f"[Ingestion] Stage 1/3 complete: produced {len(chunk_metadata)} chunks")
+        logger.info(f"[Ingestion] Stage 1/5 complete: produced {len(chunk_metadata)} chunks")
 
         texts       = [cm.text        for cm in chunk_metadata]
         page_nums   = [cm.page_number for cm in chunk_metadata]
         clause_ids  = [cm.clause_id   for cm in chunk_metadata]
 
-        logger.info(f"[Ingestion] Stage 2/3: Generating embeddings for {len(texts)} chunks using GeminiProvider")
-        # Generate Embeddings
+        logger.info(f"[Ingestion] Stage 2/5: Generating embeddings for {len(texts)} chunks")
         embeddings = llm_provider.generate_embeddings(texts)
-        logger.info(f"[Ingestion] Stage 2/3 complete: generated {len(embeddings)} embedding vectors")
+        logger.info(f"[Ingestion] Stage 2/5 complete: generated {len(embeddings)} embedding vectors")
 
-        logger.info("[Ingestion] Stage 3/3: Inserting vector embeddings and chunks into Qdrant database")
+        logger.info("[Ingestion] Stage 3/5: Inserting vector embeddings into Qdrant")
         qdrant_service.insert_chunks(
             workspace_id=workspace_id,
             document_id=doc.id,
@@ -85,7 +84,128 @@ async def upload_document(
             page_numbers=page_nums,
             clause_ids=clause_ids,
         )
-        logger.info(f"[Ingestion] Ingestion pipeline completed successfully for {safe_filename}")
+        logger.info(f"[Ingestion] Stage 3/5 complete")
+
+        # Stage 4: Extract PKM entities, general entities, create KG nodes
+        logger.info(f"[Ingestion] Stage 4/5: Knowledge extraction for {safe_filename}")
+        try:
+            from app.db.models import PKMEntity, Entity, KnowledgeGraphNode, KnowledgeGraphEdge, Suggestion, MemoryTimelineEvent
+            from sqlalchemy import func
+            import json
+
+            # Extract entities via LLM
+            text_content = "\n".join(texts[:3])  # Use first 3 chunks for extraction
+            extract_prompt = f"""
+Extract key PKM Entities (Goals, Projects, Interests) and General Entities (People, Companies, Technologies) from the following text.
+Return ONLY valid JSON:
+{{"pkm_entities": [{{"category": "Goal", "value": "...", "confidence": 80}}], "entities": [{{"type": "Person", "name": "..."}}]}}
+Text:
+{text_content[:2000]}
+"""
+            response_text = llm_provider.generate_text(extract_prompt, "You are an AI extracting structured data.")
+            clean_resp = response_text.replace("```json", "").replace("```", "").strip()
+            extract_data = json.loads(clean_resp)
+
+            # Store PKM entities
+            pkm_count = 0
+            for pkm in extract_data.get("pkm_entities", []):
+                value = pkm.get("value", "").strip()
+                if not value:
+                    continue
+                existing_pkm = db.query(PKMEntity).filter(
+                    PKMEntity.user_id == current_user.id,
+                    func.lower(func.trim(PKMEntity.value)) == value.lower()
+                ).first()
+                if existing_pkm:
+                    existing_pkm.confidence = min(100, existing_pkm.confidence + 5)
+                else:
+                    new_pkm = PKMEntity(
+                        user_id=current_user.id,
+                        category=pkm.get("category", "Interest"),
+                        value=value,
+                        confidence=pkm.get("confidence", 50),
+                        source_file=safe_filename,
+                        evidence_type="structured_memory",
+                        priority=2
+                    )
+                    db.add(new_pkm)
+                    db.flush()
+                    db.add(KnowledgeGraphNode(user_id=current_user.id, node_type="PKMEntity", node_id=new_pkm.id))
+                    pkm_count += 1
+
+            # Store general entities
+            ent_count = 0
+            for ent in extract_data.get("entities", []):
+                name = ent.get("name", "").strip()
+                if not name:
+                    continue
+                existing_ent = db.query(Entity).filter(
+                    Entity.user_id == current_user.id,
+                    func.lower(func.trim(Entity.name)) == name.lower()
+                ).first()
+                if not existing_ent:
+                    new_ent = Entity(user_id=current_user.id, type=ent.get("type", "Concept"), name=name)
+                    db.add(new_ent)
+                    db.flush()
+                    db.add(KnowledgeGraphNode(user_id=current_user.id, node_type="Entity", node_id=new_ent.id))
+                    ent_count += 1
+
+            # Auto-create edges between entities from same document
+            all_new_nodes = db.query(KnowledgeGraphNode).filter(
+                KnowledgeGraphNode.user_id == current_user.id
+            ).all()
+            if len(all_new_nodes) > 1:
+                # Connect new nodes to each other (skip self-loops and duplicates)
+                for i, node_a in enumerate(all_new_nodes):
+                    for node_b in all_new_nodes[i+1:]:
+                        existing_edge = db.query(KnowledgeGraphEdge).filter(
+                            KnowledgeGraphEdge.user_id == current_user.id,
+                            KnowledgeGraphEdge.source_node_id == node_a.id,
+                            KnowledgeGraphEdge.target_node_id == node_b.id
+                        ).first()
+                        if not existing_edge:
+                            db.add(KnowledgeGraphEdge(
+                                user_id=current_user.id,
+                                source_node_id=node_a.id,
+                                target_node_id=node_b.id,
+                                relationship_type="co_occurring"
+                            ))
+
+            db.commit()
+            logger.info(f"[Ingestion] Stage 4/5 complete: {pkm_count} PKMs, {ent_count} entities extracted")
+        except Exception as e:
+            logger.error(f"[Ingestion] Knowledge extraction failed (non-fatal): {e}")
+
+        # Stage 5: Create timeline event and trigger reflection
+        logger.info(f"[Ingestion] Stage 5/5: Timeline and reflection for {safe_filename}")
+        try:
+            from app.db.models import MemoryTimelineEvent, QueuedTask
+            timeline_event = MemoryTimelineEvent(
+                user_id=current_user.id,
+                workspace_id=workspace_id,
+                event_type="creation",
+                content=f"Document '{safe_filename}' was uploaded and processed."
+            )
+            db.add(timeline_event)
+
+            # Queue reflection task
+            refl_payload = json.dumps({
+                "workspace_id": workspace_id,
+                "source_file": safe_filename,
+                "document_id": doc.id
+            })
+            db.add(QueuedTask(
+                user_id=current_user.id,
+                task_type="generate_reflection",
+                payload=refl_payload,
+                status="pending"
+            ))
+            db.commit()
+            logger.info(f"[Ingestion] Stage 5/5 complete")
+        except Exception as e:
+            logger.error(f"[Ingestion] Timeline/reflection failed (non-fatal): {e}")
+
+        logger.info(f"[Ingestion] Full pipeline completed successfully for {safe_filename}")
     except Exception as e:
         # Unwrap nested exceptions (e.g. google-api-core RetryError → ClientError)
         root_cause = unwrap_exception_chain(e)

@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.uuid_patch import _patch_uuid7_int  # noqa: F401 — must run before langchain imports
 from app.core.config import settings
-from app.api.routers import auth, workspaces, documents, chat, brain, timeline, hud, explain, agent, dashboard
+from app.api.routers import auth, workspaces, documents, chat, brain, timeline, hud, explain, agent, dashboard, neural
 from app.services.file_watcher import start_watcher
 from app.services.batch_processor import run_batch_processor
 from app.services.reflection_engine import run_reflection_engine
@@ -69,6 +69,7 @@ app.include_router(hud.router, prefix=f"{settings.API_V1_STR}/hud", tags=["hud"]
 app.include_router(explain.router, prefix=f"{settings.API_V1_STR}", tags=["explain"])
 app.include_router(agent.router, prefix=f"{settings.API_V1_STR}", tags=["agent"])
 app.include_router(dashboard.router, prefix=f"{settings.API_V1_STR}/dashboard", tags=["dashboard"])
+app.include_router(neural.router, prefix=f"{settings.API_V1_STR}", tags=["neural"])
 
 @app.get("/")
 def root():

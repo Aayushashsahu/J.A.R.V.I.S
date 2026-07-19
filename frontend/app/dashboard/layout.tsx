@@ -132,6 +132,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: "Second Brain Chat", href: `/dashboard/chat?workspace=${activeWorkspace}`, icon: MessageSquare },
     { name: "Document Ingestion", href: `/dashboard/documents?workspace=${activeWorkspace}`, icon: FileText },
     { name: "Knowledge Graph", href: "/dashboard/graph", icon: Network },
+        { name: "Neural Connections", href: "/dashboard/neural", icon: Sparkles },
     { name: "Reflections & Beliefs", href: "/dashboard/beliefs", icon: BrainCircuit },
     { name: "Smart Suggestions", href: "/dashboard/suggestions", icon: Lightbulb }
   ];
