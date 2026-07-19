@@ -69,40 +69,58 @@ def _make_record(chunk_id: str, text: str = "LPG clearance 3 metres", page_numbe
     )
 
 
+def _mock_qdrant_search_response(hits):
+    """Create a mock requests.Response for Qdrant REST API /points/search."""
+    result = []
+    for h in hits:
+        result.append({
+            "id": h.id,
+            "score": h.score,
+            "payload": h.payload,
+        })
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {"result": result, "status": "ok", "time": 0.001}
+    return mock_resp
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Tests: Dense retrieval
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestDenseRetrieval:
 
-    def test_retrieve_returns_chunk_results(self, qdrant_mock: MagicMock):
+    def test_retrieve_returns_chunk_results(self):
         """retrieve() must return a non-empty list of ChunkResult objects."""
         from app.services.retriever import retriever, ChunkResult
 
-        qdrant_mock.query_points.return_value = [
+        hits = [
             _make_scored_point("uuid-1", 0.91),
             _make_scored_point("uuid-2", 0.85, text="Clause 5.2 fire distance"),
         ]
 
-        results = retriever.retrieve(
-            query="LPG clearance",
-            workspace_id="ws-test",
-            top_k=5,
-        )
+        with patch("app.services.qdrant_service.requests.post", return_value=_mock_qdrant_search_response(hits)):
+            results = retriever.retrieve(
+                query="LPG clearance",
+                workspace_id="ws-test",
+                top_k=5,
+            )
 
         assert isinstance(results, list)
         assert len(results) == 2
         for r in results:
             assert isinstance(r, ChunkResult)
 
-    def test_chunk_result_has_all_required_fields(self, qdrant_mock: MagicMock):
+    def test_chunk_result_has_all_required_fields(self):
         """Every ChunkResult must have chunk_id, source, text, score, page, clause_id."""
         from app.services.retriever import retriever
 
-        qdrant_mock.query_points.return_value = [
+        hits = [
             _make_scored_point("uuid-3", 0.78, page_number=4, clause_id="Section 7.1"),
         ]
-        results = retriever.retrieve("fire safety", "ws-test")
+
+        with patch("app.services.qdrant_service.requests.post", return_value=_mock_qdrant_search_response(hits)):
+            results = retriever.retrieve("fire safety", "ws-test")
 
         assert results
         r = results[0]
@@ -114,35 +132,31 @@ class TestDenseRetrieval:
         assert r.clause_id == "Section 7.1"
         assert r.document_id == "doc-001"
 
-    def test_retrieve_empty_workspace_returns_empty_list(self, qdrant_mock: MagicMock):
+    def test_retrieve_empty_workspace_returns_empty_list(self):
         """No Qdrant hits must produce an empty list, not an exception."""
         from app.services.retriever import retriever
 
-        qdrant_mock.query_points.return_value = MagicMock(points=[])
-        results = retriever.retrieve("anything", "ws-empty")
+        with patch("app.services.qdrant_service.requests.post", return_value=_mock_qdrant_search_response([])):
+            results = retriever.retrieve("anything", "ws-empty")
         assert results == []
 
-    def test_retrieve_dense_does_not_call_scroll(self, qdrant_mock: MagicMock):
+    def test_retrieve_dense_does_not_call_scroll(self):
         """Dense-only mode must NOT call scroll() (that is the BM25 code path)."""
         from app.services.retriever import retriever
+        from app.services.qdrant_service import qdrant_service
 
-        qdrant_mock.query_points.return_value = MagicMock(points=[])
-        qdrant_mock.scroll.reset_mock()
+        with patch("app.services.qdrant_service.requests.post", return_value=_mock_qdrant_search_response([])):
+            with patch.object(qdrant_service.client, "scroll") as mock_scroll:
+                retriever.retrieve("test", "ws-test", use_hybrid=False)
+                mock_scroll.assert_not_called()
 
-        retriever.retrieve("test", "ws-test", use_hybrid=False)
-
-        qdrant_mock.scroll.assert_not_called()
-
-    def test_retrieve_qdrant_failure_returns_empty_list(self, qdrant_mock: MagicMock):
+    def test_retrieve_qdrant_failure_returns_empty_list(self):
         """If Qdrant raises, retrieve() must return [] and not propagate the exception."""
         from app.services.retriever import retriever
 
-        qdrant_mock.query_points.side_effect = ConnectionError("Qdrant unavailable")
-        try:
+        with patch("app.services.qdrant_service.requests.post", side_effect=ConnectionError("Qdrant unavailable")):
             results = retriever.retrieve("test", "ws-test")
             assert results == []
-        finally:
-            qdrant_mock.query_points.side_effect = None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -151,23 +165,28 @@ class TestDenseRetrieval:
 
 class TestHybridRetrieval:
 
-    def test_hybrid_activates_scroll(self, qdrant_mock: MagicMock):
+    def test_hybrid_activates_scroll(self):
         """use_hybrid=True must call scroll() to build the BM25 corpus."""
         from app.services.retriever import retriever
+        from app.services.qdrant_service import qdrant_service
 
-        qdrant_mock.query_points.return_value = MagicMock(points=[_make_scored_point("uuid-h1", 0.80)])
-        qdrant_mock.scroll.return_value = ([_make_record("uuid-h1")], None)
+        hits = [_make_scored_point("uuid-h1", 0.80)]
+        fake_embedding = [0.1] * 1024
 
-        with patch("rank_bm25.BM25Okapi") as mock_bm25_cls:
-            bm25_instance = MagicMock()
-            bm25_instance.get_scores.return_value = [0.5]
-            mock_bm25_cls.return_value = bm25_instance
+        with patch("app.services.qdrant_service.requests.post", return_value=_mock_qdrant_search_response(hits)):
+            with patch.object(retriever, "_embed", return_value=fake_embedding):
+                with patch.object(qdrant_service.client, "scroll", return_value=([_make_record("uuid-h1")], None)) as mock_scroll:
+                    with patch("rank_bm25.BM25Okapi") as mock_bm25_cls:
+                        bm25_instance = MagicMock()
+                        bm25_instance.get_scores.return_value = [0.5]
+                        mock_bm25_cls.return_value = bm25_instance
 
-            retriever.retrieve("LPG clearance", "ws-test", use_hybrid=True)
+                        retriever.retrieve("LPG clearance", "ws-test", use_hybrid=True)
 
-        qdrant_mock.scroll.assert_called()
+                        # Assert INSIDE the patch context (mock is restored after exit)
+                        mock_scroll.assert_called()
 
-    def test_hybrid_rrf_scores_are_small_rational_numbers(self, qdrant_mock: MagicMock):
+    def test_hybrid_rrf_scores_are_small_rational_numbers(self):
         """
         RRF scores must be small (~1/(60+rank)) not cosine scores (~0.7–0.9).
 
@@ -176,16 +195,20 @@ class TestHybridRetrieval:
         Cosine scores are typically > 0.5. This assertion distinguishes them.
         """
         from app.services.retriever import retriever
+        from app.services.qdrant_service import qdrant_service
 
-        qdrant_mock.query_points.return_value = MagicMock(points=[_make_scored_point("uuid-rrf1", 0.90)])
-        qdrant_mock.scroll.return_value = ([_make_record("uuid-rrf1", "LPG clearance 3 metres")], None)
+        hits = [_make_scored_point("uuid-rrf1", 0.90)]
+        fake_embedding = [0.1] * 1024
 
-        with patch("rank_bm25.BM25Okapi") as mock_bm25_cls:
-            bm25_instance = MagicMock()
-            bm25_instance.get_scores.return_value = [2.5]
-            mock_bm25_cls.return_value = bm25_instance
+        with patch("app.services.qdrant_service.requests.post", return_value=_mock_qdrant_search_response(hits)):
+            with patch.object(retriever, "_embed", return_value=fake_embedding):
+                with patch.object(qdrant_service.client, "scroll", return_value=([_make_record("uuid-rrf1", "LPG clearance 3 metres")], None)):
+                    with patch("rank_bm25.BM25Okapi") as mock_bm25_cls:
+                        bm25_instance = MagicMock()
+                        bm25_instance.get_scores.return_value = [2.5]
+                        mock_bm25_cls.return_value = bm25_instance
 
-            results = retriever.retrieve("LPG clearance", "ws-test", use_hybrid=True, top_k=5)
+                        results = retriever.retrieve("LPG clearance", "ws-test", use_hybrid=True, top_k=5)
 
         if results:
             for r in results:

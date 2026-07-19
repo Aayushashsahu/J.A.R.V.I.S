@@ -1,7 +1,19 @@
+import uuid
+import logging
+import requests
 from qdrant_client import QdrantClient
 from qdrant_client.models import VectorParams, Distance, PointStruct, Filter, FieldCondition, MatchValue
 from app.core.config import settings
-import uuid
+
+logger = logging.getLogger(__name__)
+
+
+class QdrantHit:
+    """Lightweight result object matching qdrant_client's hit interface."""
+    def __init__(self, d: dict):
+        self.id = d.get("id")
+        self.payload = d.get("payload", {})
+        self.score = d.get("score", 0.0)
 
 class QdrantService:
     def __init__(self, embedding_dim: int = None):
@@ -118,35 +130,30 @@ class QdrantService:
         Uses the Qdrant REST API /points/search endpoint directly
         for maximum compatibility across Qdrant server versions.
         """
-        import logging
-        logger = logging.getLogger(__name__)
+        url = f"http://{settings.QDRANT_HOST}:{settings.QDRANT_PORT}/collections/{self.collection_name}/points/search"
+        payload = {
+            "vector": query_embedding,
+            "limit": limit,
+            "filter": {
+                "must": [
+                    {"key": "workspace_id", "match": {"value": workspace_id}}
+                ]
+            },
+            "with_payload": True
+        }
         try:
-            import requests
-            url = f"http://{settings.QDRANT_HOST}:{settings.QDRANT_PORT}/collections/{self.collection_name}/points/search"
-            payload = {
-                "vector": query_embedding,
-                "limit": limit,
-                "filter": {
-                    "must": [
-                        {"key": "workspace_id", "match": {"value": workspace_id}}
-                    ]
-                },
-                "with_payload": True
-            }
             resp = requests.post(url, json=payload, timeout=10)
-            if resp.status_code != 200:
-                logger.error(f"Qdrant search returned {resp.status_code}: {resp.text[:200]}")
-                return []
-            data = resp.json().get("result", [])
-            # Convert to objects with .id, .payload, .score attributes
-            class Hit:
-                def __init__(self, d):
-                    self.id = d.get("id")
-                    self.payload = d.get("payload", {})
-                    self.score = d.get("score", 0.0)
-            return [Hit(d) for d in data]
-        except Exception as e:
-            logger.error(f"Qdrant search failed: {e}", exc_info=True)
+        except requests.RequestException as e:
+            logger.error(f"Qdrant search network error: {e}")
             return []
+        if resp.status_code != 200:
+            logger.error(f"Qdrant search returned {resp.status_code}: {resp.text[:200]}")
+            return []
+        try:
+            data = resp.json().get("result", [])
+        except ValueError:
+            logger.error(f"Qdrant search returned invalid JSON")
+            return []
+        return [QdrantHit(d) for d in data]
 
 qdrant_service = QdrantService()

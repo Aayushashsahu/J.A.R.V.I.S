@@ -100,6 +100,25 @@ _patch_batch.start()
 _patch_reflect = patch("app.main.run_reflection_engine", return_value=_noop_coroutine())
 _patch_reflect.start()
 
+# --- Mock for Qdrant REST API (used by the new HTTP-based search) ---
+def _mock_qdrant_search_post(url, json=None, **kwargs):
+    """Mock the Qdrant REST API /points/search endpoint.
+    
+    Returns empty results by default for Qdrant searches.
+    For non-Qdrant URLs, returns a mock 500 response to prevent
+    accidental real HTTP calls during testing.
+    """
+    if '/points/search' in url:
+        return MagicMock(status_code=200, json=lambda: {"result": [], "status": "ok", "time": 0.001})
+    # Non-Qdrant URLs: return a mock error to prevent accidental real HTTP calls
+    return MagicMock(status_code=500, json=lambda: {"detail": "Mock: unexpected HTTP call in test"}, text="Mock")
+
+_patch_requests_post = patch(
+    "app.services.qdrant_service.requests.post",
+    side_effect=_mock_qdrant_search_post,
+)
+_patch_requests_post.start()
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 2: safe to import app modules now
 # ─────────────────────────────────────────────────────────────────────────────

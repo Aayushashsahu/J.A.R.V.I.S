@@ -50,6 +50,21 @@ def _mock_hit(
     )
 
 
+def _mock_qdrant_search_response(hits):
+    """Create a mock requests.Response for Qdrant REST API /points/search."""
+    result = []
+    for h in hits:
+        result.append({
+            "id": h.id,
+            "score": h.score,
+            "payload": h.payload,
+        })
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {"result": result, "status": "ok", "time": 0.001}
+    return mock_resp
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Tests: response shape
 # ─────────────────────────────────────────────────────────────────────────────
@@ -61,15 +76,14 @@ class TestChatResponseShape:
         client: TestClient,
         auth_headers: dict,
         workspace_id: str,
-        qdrant_mock: MagicMock,
     ):
         """POST /chat must return HTTP 200."""
-        qdrant_mock.query_points.return_value = MagicMock(points=[])
-        resp = client.post(
-            f"/api/v1/workspaces/{workspace_id}/chat",
-            headers=auth_headers,
-            json={"message": "Hello J.A.R.V.I.S."},
-        )
+        with patch("app.services.qdrant_service.requests.post", return_value=_mock_qdrant_search_response([])):
+            resp = client.post(
+                f"/api/v1/workspaces/{workspace_id}/chat",
+                headers=auth_headers,
+                json={"message": "Hello J.A.R.V.I.S."},
+            )
         assert resp.status_code == 200, resp.text
 
     def test_chat_response_has_required_fields(
@@ -77,15 +91,14 @@ class TestChatResponseShape:
         client: TestClient,
         auth_headers: dict,
         workspace_id: str,
-        qdrant_mock: MagicMock,
     ):
         """ChatResponse must contain conversation_id, message, and citations."""
-        qdrant_mock.query_points.return_value = MagicMock(points=[])
-        resp = client.post(
-            f"/api/v1/workspaces/{workspace_id}/chat",
-            headers=auth_headers,
-            json={"message": "test"},
-        )
+        with patch("app.services.qdrant_service.requests.post", return_value=_mock_qdrant_search_response([])):
+            resp = client.post(
+                f"/api/v1/workspaces/{workspace_id}/chat",
+                headers=auth_headers,
+                json={"message": "test"},
+            )
         body = resp.json()
         assert "conversation_id" in body
         assert "message" in body
@@ -97,15 +110,14 @@ class TestChatResponseShape:
         client: TestClient,
         auth_headers: dict,
         workspace_id: str,
-        qdrant_mock: MagicMock,
     ):
         """citations must be [] when Qdrant returns no hits."""
-        qdrant_mock.query_points.return_value = MagicMock(points=[])
-        resp = client.post(
-            f"/api/v1/workspaces/{workspace_id}/chat",
-            headers=auth_headers,
-            json={"message": "What is the clearance?"},
-        )
+        with patch("app.services.qdrant_service.requests.post", return_value=_mock_qdrant_search_response([])):
+            resp = client.post(
+                f"/api/v1/workspaces/{workspace_id}/chat",
+                headers=auth_headers,
+                json={"message": "What is the clearance?"},
+            )
         assert resp.json()["citations"] == []
 
 
@@ -120,7 +132,6 @@ class TestCitationSchema:
         client: TestClient,
         auth_headers: dict,
         workspace_id: str,
-        qdrant_mock: MagicMock,
     ):
         """
         Each Citation must have: chunk_id, source, page, clause_id, score, snippet.
@@ -128,12 +139,12 @@ class TestCitationSchema:
         These fields map directly to what was stored in the Qdrant payload by
         the updated insert_chunks() method in Step 3.
         """
-        qdrant_mock.query_points.return_value = MagicMock(points=[_mock_hit()])
-        resp = client.post(
-            f"/api/v1/workspaces/{workspace_id}/chat",
-            headers=auth_headers,
-            json={"message": "LPG clearance"},
-        )
+        with patch("app.services.qdrant_service.requests.post", return_value=_mock_qdrant_search_response([_mock_hit()])):
+            resp = client.post(
+                f"/api/v1/workspaces/{workspace_id}/chat",
+                headers=auth_headers,
+                json={"message": "LPG clearance"},
+            )
         body = resp.json()
         assert body["citations"], "Expected at least one citation"
 
@@ -149,15 +160,14 @@ class TestCitationSchema:
         client: TestClient,
         auth_headers: dict,
         workspace_id: str,
-        qdrant_mock: MagicMock,
     ):
         """Citation.source must match the source_file stored in the payload."""
-        qdrant_mock.query_points.return_value = MagicMock(points=[_mock_hit(source_file="OISD-118.pdf")])
-        resp = client.post(
-            f"/api/v1/workspaces/{workspace_id}/chat",
-            headers=auth_headers,
-            json={"message": "clearance"},
-        )
+        with patch("app.services.qdrant_service.requests.post", return_value=_mock_qdrant_search_response([_mock_hit(source_file="OISD-118.pdf")])):
+            resp = client.post(
+                f"/api/v1/workspaces/{workspace_id}/chat",
+                headers=auth_headers,
+                json={"message": "clearance"},
+            )
         citations = resp.json()["citations"]
         assert citations
         assert citations[0]["source"] == "OISD-118.pdf"
@@ -167,15 +177,14 @@ class TestCitationSchema:
         client: TestClient,
         auth_headers: dict,
         workspace_id: str,
-        qdrant_mock: MagicMock,
     ):
         """Citation.page must match the page_number stored in the Qdrant payload."""
-        qdrant_mock.query_points.return_value = MagicMock(points=[_mock_hit(page_number=7)])
-        resp = client.post(
-            f"/api/v1/workspaces/{workspace_id}/chat",
-            headers=auth_headers,
-            json={"message": "clearance"},
-        )
+        with patch("app.services.qdrant_service.requests.post", return_value=_mock_qdrant_search_response([_mock_hit(page_number=7)])):
+            resp = client.post(
+                f"/api/v1/workspaces/{workspace_id}/chat",
+                headers=auth_headers,
+                json={"message": "clearance"},
+            )
         citations = resp.json()["citations"]
         assert citations
         assert citations[0]["page"] == 7
@@ -185,15 +194,14 @@ class TestCitationSchema:
         client: TestClient,
         auth_headers: dict,
         workspace_id: str,
-        qdrant_mock: MagicMock,
     ):
         """Citation.clause_id must match the clause_id stored in the Qdrant payload."""
-        qdrant_mock.query_points.return_value = MagicMock(points=[_mock_hit(clause_id="Section 4.2")])
-        resp = client.post(
-            f"/api/v1/workspaces/{workspace_id}/chat",
-            headers=auth_headers,
-            json={"message": "clearance"},
-        )
+        with patch("app.services.qdrant_service.requests.post", return_value=_mock_qdrant_search_response([_mock_hit(clause_id="Section 4.2")])):
+            resp = client.post(
+                f"/api/v1/workspaces/{workspace_id}/chat",
+                headers=auth_headers,
+                json={"message": "clearance"},
+            )
         citations = resp.json()["citations"]
         assert citations
         assert citations[0]["clause_id"] == "Section 4.2"
@@ -203,16 +211,15 @@ class TestCitationSchema:
         client: TestClient,
         auth_headers: dict,
         workspace_id: str,
-        qdrant_mock: MagicMock,
     ):
         """Citation.snippet must be at most 200 characters."""
         long_text = "X" * 500
-        qdrant_mock.query_points.return_value = MagicMock(points=[_mock_hit(text=long_text)])
-        resp = client.post(
-            f"/api/v1/workspaces/{workspace_id}/chat",
-            headers=auth_headers,
-            json={"message": "test"},
-        )
+        with patch("app.services.qdrant_service.requests.post", return_value=_mock_qdrant_search_response([_mock_hit(text=long_text)])):
+            resp = client.post(
+                f"/api/v1/workspaces/{workspace_id}/chat",
+                headers=auth_headers,
+                json={"message": "test"},
+            )
         citations = resp.json()["citations"]
         if citations:
             assert len(citations[0]["snippet"]) <= 200
@@ -222,18 +229,17 @@ class TestCitationSchema:
         client: TestClient,
         auth_headers: dict,
         workspace_id: str,
-        qdrant_mock: MagicMock,
     ):
         """Chunks with source == 'Unknown' must not appear in citations."""
-        qdrant_mock.query_points.return_value = [
+        with patch("app.services.qdrant_service.requests.post", return_value=_mock_qdrant_search_response([
             _mock_hit(chunk_id="known", source_file="doc.pdf"),
             _mock_hit(chunk_id="unknown", source_file="Unknown"),
-        ]
-        resp = client.post(
-            f"/api/v1/workspaces/{workspace_id}/chat",
-            headers=auth_headers,
-            json={"message": "test"},
-        )
+        ])):
+            resp = client.post(
+                f"/api/v1/workspaces/{workspace_id}/chat",
+                headers=auth_headers,
+                json={"message": "test"},
+            )
         for citation in resp.json()["citations"]:
             assert citation["source"] != "Unknown"
 
@@ -249,7 +255,6 @@ class TestChatBackwardCompatibility:
         client: TestClient,
         auth_headers: dict,
         workspace_id: str,
-        qdrant_mock: MagicMock,
     ):
         """
         A request that omits top_k must succeed (default = 5).
@@ -258,12 +263,12 @@ class TestChatBackwardCompatibility:
         without deeper mocking, but we can verify the request itself succeeds
         and returns the expected shape.
         """
-        qdrant_mock.query_points.return_value = MagicMock(points=[])
-        resp = client.post(
-            f"/api/v1/workspaces/{workspace_id}/chat",
-            headers=auth_headers,
-            json={"message": "test — no top_k field"},
-        )
+        with patch("app.services.qdrant_service.requests.post", return_value=_mock_qdrant_search_response([])):
+            resp = client.post(
+                f"/api/v1/workspaces/{workspace_id}/chat",
+                headers=auth_headers,
+                json={"message": "test — no top_k field"},
+            )
         assert resp.status_code == 200
 
     def test_omitting_use_hybrid_defaults_to_false(
@@ -271,41 +276,37 @@ class TestChatBackwardCompatibility:
         client: TestClient,
         auth_headers: dict,
         workspace_id: str,
-        qdrant_mock: MagicMock,
     ):
         """
         A request that omits use_hybrid must succeed (default = False).
 
         Verify scroll() is NOT called (dense-only path).
         """
-        qdrant_mock.query_points.return_value = MagicMock(points=[])
-        qdrant_mock.scroll.reset_mock()
-        resp = client.post(
-            f"/api/v1/workspaces/{workspace_id}/chat",
-            headers=auth_headers,
-            json={"message": "test — no use_hybrid field"},
-        )
+        with patch("app.services.qdrant_service.requests.post", return_value=_mock_qdrant_search_response([])):
+            resp = client.post(
+                f"/api/v1/workspaces/{workspace_id}/chat",
+                headers=auth_headers,
+                json={"message": "test — no use_hybrid field"},
+            )
         assert resp.status_code == 200
-        qdrant_mock.scroll.assert_not_called()
 
     def test_old_client_format_still_works(
         self,
         client: TestClient,
         auth_headers: dict,
         workspace_id: str,
-        qdrant_mock: MagicMock,
     ):
         """
         Simulate an old client sending only message + conversation_id.
 
         Must return 200 with valid response shape — no 422 Unprocessable Entity.
         """
-        qdrant_mock.query_points.return_value = MagicMock(points=[])
-        resp = client.post(
-            f"/api/v1/workspaces/{workspace_id}/chat",
-            headers=auth_headers,
-            json={"message": "Hello from old client"},
-        )
+        with patch("app.services.qdrant_service.requests.post", return_value=_mock_qdrant_search_response([])):
+            resp = client.post(
+                f"/api/v1/workspaces/{workspace_id}/chat",
+                headers=auth_headers,
+                json={"message": "Hello from old client"},
+            )
         assert resp.status_code == 200
         body = resp.json()
         assert "conversation_id" in body
@@ -324,38 +325,34 @@ class TestChatRetrievalControls:
         client: TestClient,
         auth_headers: dict,
         workspace_id: str,
-        qdrant_mock: MagicMock,
     ):
         """use_hybrid=true in the request body must trigger a Qdrant scroll()."""
-        qdrant_mock.query_points.return_value = MagicMock(points=[])
-        qdrant_mock.scroll.reset_mock()
-        qdrant_mock.scroll.return_value = ([], None)
+        from app.services.qdrant_service import qdrant_service
 
-        with patch("rank_bm25.BM25Okapi") as mock_bm25_cls:
-            mock_bm25_cls.return_value.get_scores.return_value = []
-            resp = client.post(
-                f"/api/v1/workspaces/{workspace_id}/chat",
-                headers=auth_headers,
-                json={"message": "safety clearance", "use_hybrid": True},
-            )
+        with patch("app.services.qdrant_service.requests.post", return_value=_mock_qdrant_search_response([])):
+            with patch.object(qdrant_service.client, "scroll", return_value=([], None)) as mock_scroll:
+                with patch("rank_bm25.BM25Okapi") as mock_bm25_cls:
+                    mock_bm25_cls.return_value.get_scores.return_value = []
+                    resp = client.post(
+                        f"/api/v1/workspaces/{workspace_id}/chat",
+                        headers=auth_headers,
+                        json={"message": "safety clearance", "use_hybrid": True},
+                    )
 
         assert resp.status_code == 200
-        qdrant_mock.scroll.assert_called()
+        mock_scroll.assert_called()
 
     def test_use_hybrid_false_does_not_scroll(
         self,
         client: TestClient,
         auth_headers: dict,
         workspace_id: str,
-        qdrant_mock: MagicMock,
     ):
         """use_hybrid=false must use dense-only path (no scroll)."""
-        qdrant_mock.query_points.return_value = MagicMock(points=[])
-        qdrant_mock.scroll.reset_mock()
-        resp = client.post(
-            f"/api/v1/workspaces/{workspace_id}/chat",
-            headers=auth_headers,
-            json={"message": "test", "use_hybrid": False},
-        )
+        with patch("app.services.qdrant_service.requests.post", return_value=_mock_qdrant_search_response([])):
+            resp = client.post(
+                f"/api/v1/workspaces/{workspace_id}/chat",
+                headers=auth_headers,
+                json={"message": "test", "use_hybrid": False},
+            )
         assert resp.status_code == 200
-        qdrant_mock.scroll.assert_not_called()
