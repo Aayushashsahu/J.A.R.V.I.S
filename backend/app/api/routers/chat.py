@@ -166,8 +166,12 @@ async def chat(
             "Raw Memory Dump:\n" + context_str
         )
 
-    # Save assistant message
-    assistant_msg = Message(conversation_id=conversation_id, role="assistant", content=assistant_response_text)
+    # Save assistant message — never save None to DB
+    assistant_msg = Message(
+        conversation_id=conversation_id,
+        role="assistant",
+        content=assistant_response_text or "No response generated."
+    )
     db.add(assistant_msg)
     db.commit()
 
