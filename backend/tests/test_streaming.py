@@ -88,7 +88,7 @@ class TestStreamEndpoint:
         qdrant_mock: MagicMock,
     ):
         """POST /chat/stream must return HTTP 200."""
-        qdrant_mock.search.return_value = []
+        qdrant_mock.query_points.return_value = []
         resp = client.post(
             f"/api/v1/workspaces/{workspace_id}/chat/stream",
             headers=auth_headers,
@@ -104,7 +104,7 @@ class TestStreamEndpoint:
         qdrant_mock: MagicMock,
     ):
         """The Content-Type header must be text/event-stream."""
-        qdrant_mock.search.return_value = []
+        qdrant_mock.query_points.return_value = []
         resp = client.post(
             f"/api/v1/workspaces/{workspace_id}/chat/stream",
             headers=auth_headers,
@@ -123,7 +123,7 @@ class TestStreamEndpoint:
         qdrant_mock: MagicMock,
     ):
         """The stream body must contain at least one 'data:' SSE line."""
-        qdrant_mock.search.return_value = []
+        qdrant_mock.query_points.return_value = []
         resp = client.post(
             f"/api/v1/workspaces/{workspace_id}/chat/stream",
             headers=auth_headers,
@@ -141,7 +141,7 @@ class TestStreamEndpoint:
         qdrant_mock: MagicMock,
     ):
         """Stream must include at least one event with type='token'."""
-        qdrant_mock.search.return_value = []
+        qdrant_mock.query_points.return_value = []
         resp = client.post(
             f"/api/v1/workspaces/{workspace_id}/chat/stream",
             headers=auth_headers,
@@ -161,7 +161,7 @@ class TestStreamEndpoint:
         qdrant_mock: MagicMock,
     ):
         """Stream must end with a 'citations' event (before [DONE])."""
-        qdrant_mock.search.return_value = [_mock_hit()]
+        qdrant_mock.query_points.return_value = [_mock_hit()]
         resp = client.post(
             f"/api/v1/workspaces/{workspace_id}/chat/stream",
             headers=auth_headers,
@@ -181,7 +181,7 @@ class TestStreamEndpoint:
         qdrant_mock: MagicMock,
     ):
         """Stream must terminate with 'data: [DONE]'."""
-        qdrant_mock.search.return_value = []
+        qdrant_mock.query_points.return_value = []
         resp = client.post(
             f"/api/v1/workspaces/{workspace_id}/chat/stream",
             headers=auth_headers,
@@ -204,7 +204,7 @@ class TestStreamEndpoint:
 
         Each citation must have chunk_id, source, page, clause_id, score, snippet.
         """
-        qdrant_mock.search.return_value = [
+        qdrant_mock.query_points.return_value = [
             _mock_hit(source_file="OISD-118.pdf", page_number=3, clause_id="Section 3.4"),
         ]
         resp = client.post(
@@ -237,7 +237,7 @@ class TestStreamEndpoint:
 
         This verifies the generator's control flow in chat_stream().
         """
-        qdrant_mock.search.return_value = [_mock_hit()]
+        qdrant_mock.query_points.return_value = [_mock_hit()]
         resp = client.post(
             f"/api/v1/workspaces/{workspace_id}/chat/stream",
             headers=auth_headers,
@@ -272,7 +272,7 @@ class TestStreamRetrievalControls:
         qdrant_mock: MagicMock,
     ):
         """use_hybrid=true must invoke Qdrant scroll() in the streaming path too."""
-        qdrant_mock.search.return_value = []
+        qdrant_mock.query_points.return_value = []
         qdrant_mock.scroll.reset_mock()
         qdrant_mock.scroll.return_value = ([], None)
 

@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from app.core.uuid_patch import _patch_uuid7_int  # noqa: F401 — must run before langchain imports
 from app.core.config import settings
 from app.api.routers import auth, workspaces, documents, chat, brain, timeline, hud, explain, agent, dashboard
 from app.services.file_watcher import start_watcher
