@@ -162,13 +162,15 @@ function useChatLogic(workspaceId: string | null) {
     const token = localStorage.getItem('token');
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
-    if (mode === "agent") {
-      await executeAgentMode(userMessage, workspaceId, token, API_URL);
-    } else {
-      await executeRagMode(userMessage, workspaceId, token, API_URL);
+    try {
+      if (mode === "agent") {
+        await executeAgentMode(userMessage, workspaceId, token, API_URL);
+      } else {
+        await executeRagMode(userMessage, workspaceId, token, API_URL);
+      }
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   const handleSuggestedClick = (text: string) => {
