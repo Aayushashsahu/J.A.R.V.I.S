@@ -21,7 +21,7 @@ def get_timeline(
     older = []
     
     from datetime import datetime, timezone
-    now = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     
     for event in events:
         delta = now - event.created_at

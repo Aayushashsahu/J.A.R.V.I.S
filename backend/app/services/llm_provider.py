@@ -92,24 +92,27 @@ class GeminiProvider(BaseLLMProvider):
 
     def generate_text(self, prompt: str, system_prompt: str = None) -> str:
         full_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
-        try:
-            return self._generate_text_gemini(full_prompt)
-        except Exception as e:
-            self.logger.warning(f"Gemini generation failed after retries: {e}. Activating NVIDIA Fallback.")
-            if self.nvidia_client is None:
-                raise RuntimeError("Gemini failed and NVIDIA fallback is not configured (set NVIDIA_API_KEY).") from e
-            # NVIDIA Fallback
+        # Try Gemini if API key is available
+        if settings.GEMINI_API_KEY:
             try:
-                completion = self.nvidia_client.chat.completions.create(
-                    model=self.nvidia_model,
-                    messages=[{"role": "user", "content": full_prompt}],
-                    temperature=0.2,
-                    max_tokens=1024
-                )
-                return completion.choices[0].message.content
-            except Exception as nvidia_e:
-                self.logger.error(f"NVIDIA fallback also failed: {nvidia_e}")
-                raise nvidia_e
+                return self._generate_text_gemini(full_prompt)
+            except Exception as e:
+                self.logger.warning(f"Gemini generation failed: {e}. Falling back to NVIDIA.")
+        # NVIDIA Fallback (used when Gemini key is missing or Gemini failed)
+        if self.nvidia_client is None:
+            raise RuntimeError("No LLM provider available. Set GEMINI_API_KEY or NVIDIA_API_KEY.")
+        try:
+            completion = self.nvidia_client.chat.completions.create(
+                model=self.nvidia_model,
+                messages=[{"role": "user", "content": full_prompt}],
+                temperature=0.2,
+                max_tokens=1024
+            )
+            result = completion.choices[0].message.content
+            return result or "No response from LLM provider."
+        except Exception as nvidia_e:
+            self.logger.error(f"NVIDIA generation failed: {nvidia_e}")
+            raise RuntimeError(f"All LLM providers failed: {nvidia_e}") from nvidia_e
 
     def generate_text_stream(self, prompt: str, system_prompt: str = None) -> Iterator[str]:
         """
@@ -128,37 +131,39 @@ class GeminiProvider(BaseLLMProvider):
         single chunk so the SSE envelope still works correctly.
         """
         full_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
-        try:
-            # Gemini: true streaming — yields as tokens arrive
-            for chunk in self.client.models.generate_content_stream(
-                model=self.model,
-                contents=full_prompt,
-            ):
-                text = getattr(chunk, "text", None)
-                if text:
-                    yield text
-        except Exception as e:
-            self.logger.warning(
-                f"Gemini stream failed: {e}. Falling back to NVIDIA (single-chunk)."
-            )
-            if self.nvidia_client is None:
-                raise RuntimeError(
-                    "Gemini streaming failed and NVIDIA fallback is not configured."
-                ) from e
-            # NVIDIA: blocking call, yield as one chunk
+        # Try Gemini if API key is available
+        if settings.GEMINI_API_KEY:
             try:
-                completion = self.nvidia_client.chat.completions.create(
-                    model=self.nvidia_model,
-                    messages=[{"role": "user", "content": full_prompt}],
-                    temperature=0.2,
-                    max_tokens=1024,
+                # Gemini: true streaming — yields as tokens arrive
+                for chunk in self.client.models.generate_content_stream(
+                    model=self.model,
+                    contents=full_prompt,
+                ):
+                    text = getattr(chunk, "text", None)
+                    if text:
+                        yield text
+                return
+            except Exception as e:
+                self.logger.warning(
+                    f"Gemini stream failed: {e}. Falling back to NVIDIA (single-chunk)."
                 )
-                text = completion.choices[0].message.content
-                if text:
-                    yield text
-            except Exception as nvidia_e:
-                self.logger.error(f"NVIDIA fallback also failed: {nvidia_e}")
-                raise nvidia_e
+        # NVIDIA Fallback (used when Gemini key is missing or Gemini failed)
+        if self.nvidia_client is None:
+            raise RuntimeError("No LLM provider available. Set GEMINI_API_KEY or NVIDIA_API_KEY.")
+        # NVIDIA: blocking call, yield as one chunk
+        try:
+            completion = self.nvidia_client.chat.completions.create(
+                model=self.nvidia_model,
+                messages=[{"role": "user", "content": full_prompt}],
+                temperature=0.2,
+                max_tokens=1024,
+            )
+            text = completion.choices[0].message.content
+            if text:
+                yield text
+        except Exception as nvidia_e:
+            self.logger.error(f"NVIDIA generation failed: {nvidia_e}")
+            raise RuntimeError(f"All LLM providers failed: {nvidia_e}") from nvidia_e
 
     @retry(wait=wait_exponential(multiplier=1, min=2, max=10), stop=stop_after_attempt(5), reraise=True, before_sleep=before_sleep_log(logger, logging.WARNING))
     def _generate_embeddings_gemini(self, texts: List[str]) -> List[List[float]]:
@@ -207,7 +212,7 @@ class GeminiProvider(BaseLLMProvider):
         input_type : "passage" for documents/chunks, "query" for search queries.
                     Only affects NVIDIA model; Gemini does not use this parameter.
         """
-        # Try Gemini first if API key is available
+        # Skip Gemini if API key is empty/missing — go straight to NVIDIA
         if settings.GEMINI_API_KEY:
             try:
                 return self._generate_embeddings_gemini(texts)

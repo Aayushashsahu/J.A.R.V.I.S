@@ -71,7 +71,7 @@ function useChatLogic(workspaceId: string | null) {
 
   const executeRagMode = async (userMessage: string, wsId: string, token: string | null, apiBase: string) => {
     try {
-      const res = await fetch(`${apiBase}/chat`, {
+      const res = await fetch(`${apiBase}/workspaces/${wsId}/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

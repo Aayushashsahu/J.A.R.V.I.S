@@ -100,8 +100,8 @@ async def chat(
         if gbrain_synthesis and not gbrain_synthesis.startswith("Error:"):
             fallback_parts.append(f"[Priority 2: GBrain Synthesis]\n{gbrain_synthesis}\n(Source: GBrain Vault)")
             logger.info("GBrain retrieval successful.")
-    except Exception as e:
-        logger.error(f"GBrain retrieval failed: {e}")
+    except BaseException as e:
+        logger.warning(f"GBrain retrieval skipped (non-fatal): {type(e).__name__}: {e}")
 
     # Priority 3: Structured Memory (PKM Entities)
     pkm_entities = db.query(PKMEntity).filter(PKMEntity.user_id == current_user.id).order_by(PKMEntity.confidence.desc()).limit(10).all()
@@ -151,11 +151,17 @@ async def chat(
             prompt=request.message,
             system_prompt=system_prompt
         )
-    except Exception as e:
-        logger.error(f"LLM Generation completely failed: {e}", exc_info=True)
-        # Deep Fallback Mode (If both Gemini and LLaMA fail)
+    except BaseException as e:
+        logger.error(f"LLM Generation completely failed: {type(e).__name__}: {e}", exc_info=True)
+        # Deep Fallback Mode (If both Gemini and NVIDIA fail)
         assistant_response_text = (
             "J.A.R.V.I.S. core systems are completely offline due to API failures.\n\n"
+            "Raw Memory Dump:\n" + context_str
+        )
+    # Safety: ensure response is never None
+    if not assistant_response_text:
+        assistant_response_text = (
+            "J.A.R.V.I.S. received an empty response from the LLM provider.\n\n"
             "Raw Memory Dump:\n" + context_str
         )
 
@@ -270,7 +276,7 @@ async def chat_stream(
         gbrain_synthesis = await gbrain_client.search(request.message)
         if gbrain_synthesis and not gbrain_synthesis.startswith("Error:"):
             fallback_parts.append(f"[Priority 2: GBrain Synthesis]\n{gbrain_synthesis}\n(Source: GBrain Vault)")
-    except Exception:
+    except BaseException:
         pass
 
     pkm_entities = db.query(PKMEntity).filter(PKMEntity.user_id == current_user.id).order_by(PKMEntity.confidence.desc()).limit(10).all()
@@ -352,13 +358,16 @@ async def chat_stream(
                 event = json.dumps({"type": "token", "content": fragment})
                 yield f"data: {event}\n\n"
 
-        except Exception as exc:
-            stream_logger.error("LLM stream failed: %s", exc, exc_info=True)
+        except BaseException as exc:
+            stream_logger.error("LLM stream failed: %s: %s", type(exc).__name__, exc, exc_info=True)
             fallback = "J.A.R.V.I.S. streaming is temporarily unavailable."
             full_response_parts.append(fallback)
             yield f"data: {json.dumps({'type': 'token', 'content': fallback})}\n\n"
 
         finally:
+            # Safety: ensure we have at least some content
+            if not full_response_parts:
+                full_response_parts.append("No response generated.")
             # Persist the full assembled response regardless of success/error.
             full_response = "".join(full_response_parts)
             if full_response:
