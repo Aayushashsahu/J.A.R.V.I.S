@@ -103,7 +103,7 @@ _patch_reflect.start()
 # --- Mock for Qdrant REST API (used by the new HTTP-based search) ---
 def _mock_qdrant_search_post(url, json=None, **kwargs):
     """Mock the Qdrant REST API /points/search endpoint.
-    
+
     Returns empty results by default for Qdrant searches.
     For non-Qdrant URLs, returns a mock 500 response to prevent
     accidental real HTTP calls during testing.

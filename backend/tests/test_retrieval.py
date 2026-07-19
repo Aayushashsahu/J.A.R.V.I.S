@@ -69,19 +69,7 @@ def _make_record(chunk_id: str, text: str = "LPG clearance 3 metres", page_numbe
     )
 
 
-def _mock_qdrant_search_response(hits):
-    """Create a mock requests.Response for Qdrant REST API /points/search."""
-    result = []
-    for h in hits:
-        result.append({
-            "id": h.id,
-            "score": h.score,
-            "payload": h.payload,
-        })
-    mock_resp = MagicMock()
-    mock_resp.status_code = 200
-    mock_resp.json.return_value = {"result": result, "status": "ok", "time": 0.001}
-    return mock_resp
+from tests.helpers import mock_qdrant_search_response as _mock_qdrant_search_response
 
 
 # ─────────────────────────────────────────────────────────────────────────────
