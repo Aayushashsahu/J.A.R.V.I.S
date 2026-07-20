@@ -59,8 +59,8 @@ function UploadHub({
     <div className="lg:col-span-7 space-y-6">
       <Card className="border border-border/40 bg-card/25 shadow-sm rounded-2xl overflow-hidden">
         <CardHeader className="border-b border-border/30 bg-secondary/15 py-4">
-          <CardTitle className="text-sm font-semibold">Upload Hub</CardTitle>
-          <CardDescription className="text-xs">Drag and drop file resources to parse structured entities.</CardDescription>
+          <CardTitle className="text-sm font-semibold">Document Ingestion Hub</CardTitle>
+          <CardDescription className="text-xs">Upload engineering documents, SOPs, inspection reports, and maintenance logs.</CardDescription>
             </CardHeader>
         <CardContent className="p-5 space-y-5">
               
@@ -89,10 +89,10 @@ function UploadHub({
             </div>
                 <div>
                   <p className="text-xs font-semibold text-foreground">
-                    Drag & drop files here to parse
+                    Drag & drop industrial documents here
                   </p>
                   <p className="text-[10px] text-muted-foreground mt-1">
-                    Supports PDF, DOCX, Markdown, or Text files
+                    PDF, DOCX, Markdown, TXT, CSV, Excel
                   </p>
             </div>
           </div>
@@ -105,7 +105,7 @@ function UploadHub({
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search local ingestion list..."
+                    placeholder="Search document queue..."
                     className="w-full bg-secondary/25 border border-border/60 focus:ring-1 focus:ring-foreground/10 rounded-lg pl-9 h-8 text-[11px]"
                   />
             </div>
@@ -231,12 +231,11 @@ function InspectPanel({ selectedFile }: { selectedFile: UploadingFile | null }) 
     {/* Right Side: Inspect & Pipeline Preview drawer panel (35%) */}
     <div className="lg:col-span-5">
       <Card className="border border-border/40 bg-card/25 shadow-sm rounded-2xl overflow-hidden min-h-[420px] flex flex-col">
-        <CardHeader className="border-b border-border/30 bg-secondary/15 py-4">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+        <CardHeader className="border-b border-border/30 bg-secondary/15 py-4">                <CardTitle className="text-sm font-semibold flex items-center gap-2">
                 <Eye className="w-4 h-4 text-primary" />
-                Resource Metadata & Pipeline
+                Processing Pipeline
               </CardTitle>
-          <CardDescription className="text-xs">Examine parsed attributes & embedding pipeline</CardDescription>
+          <CardDescription className="text-xs">Document processing status and metadata</CardDescription>
             </CardHeader>
             
         <CardContent className="p-5 flex-1 flex flex-col justify-between">
@@ -253,12 +252,12 @@ function InspectPanel({ selectedFile }: { selectedFile: UploadingFile | null }) 
 
                     <div className="grid grid-cols-2 gap-2 text-[10px]">
                       <div className="p-2 rounded-lg bg-secondary/25 border border-border/30">
-                        <span className="text-muted-foreground block mb-0.5 uppercase tracking-wider text-[8px]">Resource Type</span>
+                        <span className="text-muted-foreground block mb-0.5 uppercase tracking-wider text-[8px]">File Type</span>
                         <span className="font-semibold font-mono">{selectedFile.file.name.split('.').pop()?.toUpperCase() || "TXT"}</span>
                   </div>
                       
                       <div className="p-2 rounded-lg bg-secondary/25 border border-border/30">
-                        <span className="text-muted-foreground block mb-0.5 uppercase tracking-wider text-[8px]">Disk Space</span>
+                        <span className="text-muted-foreground block mb-0.5 uppercase tracking-wider text-[8px]">File Size</span>
                         <span className="font-semibold font-mono">{formatFileSize(selectedFile.file.size)}</span>
                   </div>
 
@@ -322,9 +321,9 @@ function InspectPanel({ selectedFile }: { selectedFile: UploadingFile | null }) 
 
                   {/* Document Preview Snippet with highlighted text */}
                   <div className="space-y-2 pt-4 border-t border-border/30">
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground block">Semantic Content Highlight</span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground block">Content Preview</span>
                     <div className="p-3.5 rounded-lg border border-border/30 bg-secondary/15 text-[11px] leading-relaxed text-foreground/80 italic select-none">
-                      "The target workspace index coordinates are optimized for dense retrieval. Mapped entities like <span className="bg-primary/20 border-b border-primary text-foreground font-semibold px-0.5">PKM_ENTITY: Project focus</span> represent key milestones parsed by the reflection engine."
+                      "Equipment <span className="bg-primary/20 border-b border-primary text-foreground font-semibold px-0.5">P-204 Centrifugal Pump</span> failed due to bearing wear. Maintenance interval exceeded by 2,400 operating hours. Recommended: Immediate replacement per OEM manual Section 4.2."
                 </div>
               </div>
 
@@ -332,15 +331,15 @@ function InspectPanel({ selectedFile }: { selectedFile: UploadingFile | null }) 
               ) : (
                 <div className="flex flex-col items-center justify-center text-center py-20 text-muted-foreground space-y-2.5">
                   <Info className="w-6 h-6 text-muted-foreground/60" />
-                  <p className="text-xs">No file resource selected.</p>
-                  <p className="text-[10px] text-muted-foreground/80 max-w-xs">Select any file card in the ingestion queue to inspect parsed semantic highlights and step pipeline.</p>
+                  <p className="text-xs">No document selected.</p>
+                  <p className="text-[10px] text-muted-foreground/80 max-w-xs">Select a document from the queue to inspect its processing pipeline and metadata.</p>
             </div>
               )}
 
               {/* Developer footer alert info */}
               <div className="mt-4 pt-3 border-t border-border/30 text-[10px] text-muted-foreground/60 flex items-center gap-1.5 select-none">
                 <Compass className="w-3.5 h-3.5 shrink-0" />
-                Indexed items are fully partitioned for query isolation.
+                All documents are vectorized and indexed for retrieval.
           </div>
 
             </CardContent>
@@ -399,7 +398,7 @@ function DocumentsContent() {
           id: Math.random().toString(36).substring(2, 9) + "_" + Date.now(),
           file,
           status: "pending",
-          processedSteps: ["Ingested", "Extracted", "Parsed", "Vectorized", "Graph Synergized"],
+          processedSteps: [                    "Ingested", "Extracted", "Parsed", "Vectorized", "KG Indexed"],
           activeStep: 0
         });
       }
@@ -495,7 +494,7 @@ function DocumentsContent() {
       if (failed > 0) {
         setMessage(`Ingestion complete with errors. Success: ${success}, Failed: ${failed}.`);
       } else {
-        setMessage(`All ${success} document(s) successfully vectorized into Second Brain!`);
+        setMessage(`All ${success} document(s) successfully indexed into knowledge base.`);
       }
       window.dispatchEvent(new Event("data-updated"));
       return latestList;
@@ -518,7 +517,7 @@ function DocumentsContent() {
           <UploadCloud className="w-8 h-8 text-primary" />
           <div>
             <h2 className="text-2xl font-bold tracking-tight text-foreground">Document Ingestion & Indexing</h2>
-            <p className="text-sm text-muted-foreground mt-0.5">Upload regulations, workspace standards, and manuals to synergize context.</p>
+            <p className="text-sm text-muted-foreground mt-0.5">Upload engineering documents, SOPs, maintenance logs, and inspection reports.</p>
           </div>
         </div>
       </div>
