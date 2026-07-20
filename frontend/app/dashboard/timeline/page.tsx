@@ -18,24 +18,27 @@ interface TimelineData {
   older: TimelineEvent[];
 }
 
-const DEMO_TIMELINE = {
-  today: [
-    { id: "d1", event_type: "creation", content: "Inspection report IR-2024-0847 for Pump P-204 indexed", created_at: new Date(Date.now() - 3600000).toISOString() },
-    { id: "d2", event_type: "creation", content: "SOP-BOILER-001: Boiler Startup Procedure v3.2 ingested", created_at: new Date(Date.now() - 10800000).toISOString() },
-    { id: "d3", event_type: "modification", content: "Maintenance log ML-C102-034 updated - Compressor C-102 bearing replacement", created_at: new Date(Date.now() - 18000000).toISOString() },
-  ],
-  this_week: [
-    { id: "d4", event_type: "reflection", content: "Root Cause Analysis completed for Heat Exchanger E-301 tube failure", created_at: new Date(Date.now() - 86400000).toISOString() },
-    { id: "d5", event_type: "modification", content: "Compliance gap detected - OSHA 1910.119 Process Safety Management", created_at: new Date(Date.now() - 172800000).toISOString() },
-    { id: "d6", event_type: "creation", content: "Work Order WO-2024-1293 created for Turbine T-105 vibration analysis", created_at: new Date(Date.now() - 259200000).toISOString() },
-    { id: "d7", event_type: "creation", content: "OEM Manual MO-VALVE-042: Control Valve CV-201 maintenance guide uploaded", created_at: new Date(Date.now() - 345600000).toISOString() },
-  ],
-  older: [
-    { id: "d8", event_type: "modification", content: "Annual maintenance schedule AM-2024 for all compressors reviewed", created_at: new Date(Date.now() - 864000000).toISOString() },
-    { id: "d9", event_type: "reflection", content: "Failure pattern analysis: recurring bearing failures on centrifugal pumps", created_at: new Date(Date.now() - 1036800000).toISOString() },
-    { id: "d10", event_type: "creation", content: "Regulatory document REG-EPA-2024-001: EPA emissions reporting requirements", created_at: new Date(Date.now() - 1296000000).toISOString() },
-  ]
-};
+function getDemoTimeline(): TimelineData {
+  const now = Date.now();
+  return {
+    today: [
+      { id: "d1", event_type: "creation", content: "Inspection report IR-2024-0847 for Pump P-204 indexed", created_at: new Date(now - 3600000).toISOString() },
+      { id: "d2", event_type: "creation", content: "SOP-BOILER-001: Boiler Startup Procedure v3.2 ingested", created_at: new Date(now - 10800000).toISOString() },
+      { id: "d3", event_type: "modification", content: "Maintenance log ML-C102-034 updated - Compressor C-102 bearing replacement", created_at: new Date(now - 18000000).toISOString() },
+    ],
+    this_week: [
+      { id: "d4", event_type: "reflection", content: "Root Cause Analysis completed for Heat Exchanger E-301 tube failure", created_at: new Date(now - 86400000).toISOString() },
+      { id: "d5", event_type: "modification", content: "Compliance gap detected - OSHA 1910.119 Process Safety Management", created_at: new Date(now - 172800000).toISOString() },
+      { id: "d6", event_type: "creation", content: "Work Order WO-2024-1293 created for Turbine T-105 vibration analysis", created_at: new Date(now - 259200000).toISOString() },
+      { id: "d7", event_type: "creation", content: "OEM Manual MO-VALVE-042: Control Valve CV-201 maintenance guide uploaded", created_at: new Date(now - 345600000).toISOString() },
+    ],
+    older: [
+      { id: "d8", event_type: "modification", content: "Annual maintenance schedule AM-2024 for all compressors reviewed", created_at: new Date(now - 864000000).toISOString() },
+      { id: "d9", event_type: "reflection", content: "Failure pattern analysis: recurring bearing failures on centrifugal pumps", created_at: new Date(now - 1036800000).toISOString() },
+      { id: "d10", event_type: "creation", content: "Regulatory document REG-EPA-2024-001: EPA emissions reporting requirements", created_at: new Date(now - 1296000000).toISOString() },
+    ]
+  };
+}
 
 export default function TimelinePage() {
   const [data, setData] = useState<TimelineData | null>(null);
@@ -56,11 +59,11 @@ export default function TimelinePage() {
       } else {
         // Fallback: realistic industrial demo data
         
-        setData(DEMO_TIMELINE);
+        setData(getDemoTimeline());
       }
     } catch (err) {
       console.error("Failed to fetch timeline", err);
-      setData(DEMO_TIMELINE);
+      setData(getDemoTimeline());
     } finally {
       setIsLoading(false);
     }
