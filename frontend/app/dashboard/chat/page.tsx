@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
 import {
   Bot, User as UserIcon, Send, RefreshCw, Copy, Check, Sparkles,
-  Settings2, Sliders, Pin, History, AlertCircle, FileText,
+  Settings2, History, AlertCircle, FileText,
   Volume2, VolumeX, Mic, MicOff, MessageSquare,
   Trash2, Plus, ChevronDown, ChevronUp
 } from "lucide-react";
@@ -125,7 +125,6 @@ function useSpeechSynthesis() {
     utterance.onend = () => setSpeakingId(null);
     utterance.onerror = () => setSpeakingId(null);
 
-    utteranceRef.current = utterance;
     setSpeakingId(msgIndex);
     window.speechSynthesis.speak(utterance);
   }, [speakingId]);
