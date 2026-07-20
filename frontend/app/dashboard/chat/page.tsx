@@ -13,6 +13,7 @@ import {
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -83,7 +84,6 @@ function generateSessionId(): string {
 
 function useSpeechSynthesis() {
   const [speakingId, setSpeakingId] = useState<number | null>(null);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const speak = useCallback((text: string, msgIndex: number) => {
     // Stop any current speech
