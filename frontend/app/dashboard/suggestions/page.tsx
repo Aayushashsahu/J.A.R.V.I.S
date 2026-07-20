@@ -7,6 +7,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Lightbulb, CheckCircle2, XCircle, BrainCircuit, FileText, ArrowRight, Activity, AlertCircle } from "lucide-react";
 
+const DEMO_SUGGESTIONS = [
+  { id: "s1", suggestion_type: "maintenance_action", confidence: 88, content: JSON.stringify({ title: "Scheduled Maintenance: Compressor C-102", recommendation: "Replace bearings on Compressor C-102 within next 500 operating hours. Failure probability increases significantly after 5500 hours.", priority: "high", equipment: "C-102", evidence: ["ML-C102-034: Bearing replacement at 5200 hours", "Failure analysis showing 73% failure rate after 5500 hours"] }) },
+  { id: "s2", suggestion_type: "compliance_gap", confidence: 92, content: JSON.stringify({ title: "OSHA Compliance Gap: Process Safety Management", recommendation: "Three PSM elements require documentation updates: MOC records for Unit 3 are 45 days overdue.", priority: "critical", standard: "OSHA 1910.119", evidence: ["MOC-2024-007 pending approval", "Last PSM audit flagged documentation gaps"] }) },
+  { id: "s3", suggestion_type: "document_upload", confidence: 75, content: JSON.stringify({ title: "Missing Document: Pump P-204 OEM Manual", recommendation: "Upload the OEM maintenance manual for Pump P-204 to enable automated compliance checking.", priority: "medium", document_type: "OEM Manual", equipment: "P-204", evidence: ["No OEM manual found for P-204", "Manufacturer: Flowserve Corporation"] }) },
+  { id: "s4", suggestion_type: "maintenance_action", confidence: 90, content: JSON.stringify({ title: "Preventive Maintenance: Heat Exchanger E-301", recommendation: "Schedule tube inspection. Last inspection was 340 days ago. Annual inspection required per TEMA.", priority: "high", equipment: "E-301", evidence: ["Last inspection: IR-E301-2023-001", "TEMA Class R requires annual inspection"] }) },
+  { id: "s5", suggestion_type: "compliance_gap", confidence: 94, content: JSON.stringify({ title: "Emissions Report Due: Unit 3 Refinery", recommendation: "Quarterly EPA emissions report due by January 15th. NOx sensors on Stack S-301 have incomplete readings.", priority: "high", standard: "EPA 40 CFR Part 60", evidence: ["NOx sensor S-301-NOX offline since Dec 28", "Q4 2023 report template generated but incomplete"] }) },
+  { id: "s6", suggestion_type: "knowledge_gap", confidence: 80, content: JSON.stringify({ title: "Knowledge Gap: Turbine T-105 Vibration Baseline", recommendation: "No baseline vibration profile exists. Create baseline from current healthy state readings.", priority: "medium", equipment: "T-105", evidence: ["Current vibration: 0.3 mils (healthy)", "No historical baseline in system"] }) },
+];
+
 export default function SuggestionsPage() {
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

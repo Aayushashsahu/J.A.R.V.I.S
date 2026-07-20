@@ -6,6 +6,17 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { BrainCircuit, Calendar, ShieldCheck, Sparkles, Activity, AlertCircle } from "lucide-react";
 
+const DEMO_BELIEFS = [
+  { id: "b1", belief_text: "All centrifugal pumps must undergo vibration analysis every 30 days per OSHA 1910.119", confidence: 95, source_notes: "OSHA 1910.119, Pump P-204 inspection history", created_at: "2024-01-15T10:00:00Z" },
+  { id: "b2", belief_text: "Boiler startup procedure requires minimum 2-hour pre-ignition safety check per ASME PTC 25", confidence: 92, source_notes: "SOP-BOILER-001, ASME PTC 25", created_at: "2024-01-14T10:00:00Z" },
+  { id: "b3", belief_text: "Compressor C-102 bearing replacement interval should be reduced from 8000 to 6000 operating hours based on failure data", confidence: 88, source_notes: "ML-C102-034, failure analysis report", created_at: "2024-01-13T10:00:00Z" },
+  { id: "b4", belief_text: "Heat Exchanger E-301 requires annual tube inspection to prevent process fluid contamination", confidence: 90, source_notes: "RCA-E301, TEMA standards", created_at: "2024-01-12T10:00:00Z" },
+  { id: "b5", belief_text: "Control Valve CV-201 packing replacement must occur every 6 months per manufacturer specification", confidence: 85, source_notes: "MO-VALVE-042, OEM maintenance schedule", created_at: "2024-01-11T10:00:00Z" },
+  { id: "b6", belief_text: "Turbine T-105 vibration levels exceeding 0.5 mils peak-to-peak require immediate shutdown per ISO 10816-3", confidence: 93, source_notes: "ISO 10816-3, Turbine monitoring data", created_at: "2024-01-10T10:00:00Z" },
+  { id: "b7", belief_text: "Flange connections in high-pressure systems must be re-torqued after initial 24-hour settling period per ASME PCC-1", confidence: 87, source_notes: "ASME PCC-1, IR-2024-0839", created_at: "2024-01-09T10:00:00Z" },
+  { id: "b8", belief_text: "EPA emissions reporting for Unit 3 refinery must be submitted quarterly by the 15th of the month", confidence: 96, source_notes: "REG-EPA-2024-001, EPA 40 CFR Part 60", created_at: "2024-01-08T10:00:00Z" },
+];
+
 export default function BeliefsPage() {
   const [beliefs, setBeliefs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
