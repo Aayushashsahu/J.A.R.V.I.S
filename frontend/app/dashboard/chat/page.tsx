@@ -4,8 +4,6 @@ import { useState, useRef, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
-import { api } from "@/lib/api";
 import {
   Bot, User as UserIcon, Send, RefreshCw, Copy, Check, Sparkles,
   Settings2, History, AlertCircle, FileText,
@@ -15,7 +13,7 @@ import {
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
+
 
 /* ═══════════════════════════════════════════════════════════════════════════
    TYPES
