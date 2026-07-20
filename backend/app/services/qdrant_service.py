@@ -17,7 +17,7 @@ class QdrantHit:
 
 class QdrantService:
     def __init__(self, embedding_dim: int = None):
-        self.client = QdrantClient(host=settings.QDRANT_HOST, port=settings.QDRANT_PORT, check_compatibility=False)
+        self.client = QdrantClient(host=settings.QDRANT_HOST, port=settings.QDRANT_PORT)
         self.collection_name = "jarvis_memory"
         # Lock embedding dimension at startup to prevent runtime mismatches.
         # Once the collection is created, the dimension is fixed.

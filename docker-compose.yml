@@ -86,7 +86,7 @@ services:
       - ${JARVIS_VAULT_PATH}:/vault
       - gbrain_data:/root/.gbrain
     command: >
-      sh -c "bun install -g github:garrytan/gbrain && ([ ! -f /root/.gbrain/config.json ] && gbrain init --pglite --no-embedding || true) && gbrain serve --http --port 8001 --host 0.0.0.0"
+      sh -c "bun pm -g trust --all || true && bun install -g github:garrytan/gbrain && rm -rf /root/.gbrain/brain.pglite/.gbrain-lock /root/.gbrain/brain.pglite/postmaster.pid /root/.gbrain/.locks && ([ ! -f /root/.gbrain/config.json ] && gbrain init --pglite --no-embedding || true) && gbrain serve --http --port 8001 --host 0.0.0.0"
     restart: always
 
 volumes:
