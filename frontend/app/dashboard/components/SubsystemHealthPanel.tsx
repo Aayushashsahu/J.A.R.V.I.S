@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Activity, AlertCircle } from "lucide-react";
+import { Activity, AlertCircle, Cpu, Database, Radio } from "lucide-react";
 
 export interface SubsystemHealthPanelProps {
   hudStatus: {
@@ -19,30 +19,39 @@ export function SubsystemHealthPanel({ hudStatus }: SubsystemHealthPanelProps) {
       <CardHeader className="border-b border-border/30 pb-4">
         <CardTitle className="text-sm font-semibold tracking-tight flex items-center gap-2">
           <Activity className="w-4 h-4 text-primary" />
-          Subsystem Operations
+          System Health
         </CardTitle>
-        <CardDescription className="text-xs">Live connection heartbeat metrics</CardDescription>
+        <CardDescription className="text-xs">Live infrastructure monitoring</CardDescription>
       </CardHeader>
       <CardContent className="p-4 space-y-4">
 
-        {/* Subsystem status loops */}
+        {/* System status */}
         <div className="space-y-3">
           <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/30 bg-secondary/15 text-xs">
-            <span className="font-medium text-foreground/80">Vector Database (Qdrant)</span>
+            <span className="font-medium text-foreground/80 flex items-center gap-2">
+              <Database className="w-3.5 h-3.5 text-primary" />
+              Vector DB (Qdrant)
+            </span>
             <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px]">
               {hudStatus.subsystems.qdrant.toUpperCase() === "OK" ? "OPERATIONAL" : hudStatus.subsystems.qdrant.toUpperCase()}
             </Badge>
           </div>
 
           <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/30 bg-secondary/15 text-xs">
-            <span className="font-medium text-foreground/80">Cognitive LLM Broker</span>
+            <span className="font-medium text-foreground/80 flex items-center gap-2">
+              <Cpu className="w-3.5 h-3.5 text-primary" />
+              AI Engine (LLM)
+            </span>
             <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px]">
               {hudStatus.subsystems.llm.toUpperCase() === "OK" ? "OPERATIONAL" : hudStatus.subsystems.llm.toUpperCase()}
             </Badge>
           </div>
 
           <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/30 bg-secondary/15 text-xs">
-            <span className="font-medium text-foreground/80">Relational Store (SQLite)</span>
+            <span className="font-medium text-foreground/80 flex items-center gap-2">
+              <Radio className="w-3.5 h-3.5 text-primary" />
+              Data Store (DB)
+            </span>
             <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px]">
               {hudStatus.subsystems.database.toUpperCase() === "OK" ? "OPERATIONAL" : hudStatus.subsystems.database.toUpperCase()}
             </Badge>
@@ -59,24 +68,24 @@ export function SubsystemHealthPanel({ hudStatus }: SubsystemHealthPanelProps) {
               <span className="font-mono font-medium text-foreground">112ms</span>
             </div>
             <div className="flex justify-between text-muted-foreground">
-              <span>Context recall rate:</span>
+              <span>Document recall rate:</span>
               <span className="font-mono font-medium text-foreground">99.8%</span>
             </div>
             <div className="flex justify-between text-muted-foreground">
-              <span>Semantic density:</span>
+              <span>Knowledge graph density:</span>
               <span className="font-mono font-medium text-foreground">0.865</span>
             </div>
           </div>
         </div>
 
-        {/* Maintenance Alerts */}
+        {/* System Alerts */}
         <div className="pt-4 border-t border-border/30">
-          <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground block mb-2">Maintenance Alerts</span>
-          <div className="p-3 rounded-lg border border-yellow-500/10 bg-yellow-500/5 flex gap-2.5 items-start">
-            <AlertCircle className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" />
-            <div className="text-[11px] text-yellow-500/80 leading-normal">
-              <span className="font-semibold block text-yellow-500">Reflection Engine Synced</span>
-              All changes compiled successfully. No optimization actions needed at this time.
+          <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground block mb-2">System Alerts</span>
+          <div className="p-3 rounded-lg border border-amber-500/10 bg-amber-500/5 flex gap-2.5 items-start">
+            <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+            <div className="text-[11px] text-amber-500/80 leading-normal">
+              <span className="font-semibold block text-amber-500">Knowledge Sync Complete</span>
+              All ingested documents processed. Vector index updated.
             </div>
           </div>
         </div>

@@ -206,17 +206,16 @@ function ChatSidebar({
 }) {
   const [showSettings, setShowSettings] = useState(false);
   const [recentChats, setRecentChats] = useState<PinnedChat[]>([
-    { id: "c1", title: "Active focus areas synthesis", active: true },
-    { id: "c2", title: "Compliance standards audit", active: false },
-    { id: "c3", title: "Reflections contradiction check", active: false },
+    { id: "c1", title: "Pump P-204 failure analysis", active: true },
+    { id: "c2", title: "Boiler startup SOP lookup", active: false },
+    { id: "c3", title: "Compliance gap assessment", active: false },
   ]);
 
   return (
     <div className="hidden lg:flex flex-col w-64 bg-card/25 border border-border/40 rounded-2xl p-4 shrink-0 flex-shrink-0 space-y-6">
       
       {/* Mode Selector Toggle */}
-      <div className="space-y-2">
-        <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/60 block px-1">Engine Mode</span>
+      <div className="space-y-2">              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/60 block px-1">Copilot Mode</span>
         <div className="grid grid-cols-2 p-1 rounded-xl bg-secondary/50 border border-border/40">
           <button
             onClick={() => setMode("rag")}
@@ -226,7 +225,7 @@ function ChatSidebar({
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            RAG Chat
+            Document Search
           </button>
           <button
             onClick={() => setMode("agent")}
@@ -245,7 +244,7 @@ function ChatSidebar({
       {/* History Sidebar */}
       <div className="flex-1 flex flex-col space-y-4">
         <div className="flex items-center justify-between px-1">
-          <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/60 block">Recent Syntheses</span>
+          <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/60 block">Recent Queries</span>
           <History className="w-3.5 h-3.5 text-muted-foreground/50" />
         </div>
         
@@ -322,9 +321,9 @@ function ChatHeader({ mode, handleResetDemo }: { mode: string, handleResetDemo: 
           <Bot className="w-4.5 h-4.5" />
         </div>
         <div>
-          <h3 className="text-sm font-semibold tracking-tight">Second Brain Inquirer</h3>
+          <h3 className="text-sm font-semibold tracking-tight">Industrial AI Copilot</h3>
           <p className="text-[10px] text-muted-foreground leading-normal">
-            {mode === "agent" ? "Reasoning core running plan traces" : "RAG retrieval query state"}
+            {mode === "agent" ? "Multi-step reasoning engine" : "RAG-powered document retrieval"}
           </p>
         </div>
       </div>
@@ -377,9 +376,9 @@ function ChatMessageList({
               <Sparkles className="w-6 h-6 text-primary" />
             </div>
             <div className="space-y-1.5">
-              <h4 className="text-sm font-semibold">How can J.A.R.V.I.S. assist your project context?</h4>
+              <h4 className="text-sm font-semibold">How can J.A.R.V.I.S. assist your plant?</h4>
               <p className="text-xs text-muted-foreground max-w-sm leading-normal">
-                Query your second brain vault or activate orchestration step tracing to resolve compliance issues.
+                Ask about equipment failures, find SOPs, check compliance, or analyze maintenance records.
               </p>
             </div>
           </div>
@@ -487,7 +486,7 @@ function ChatMessageList({
                   <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }}></span>
                   <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "150ms" }}></span>
                   <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "300ms" }}></span>
-                  <span className="ml-1 text-[11px] text-muted-foreground">J.A.R.V.I.S. is synthesizing...</span>
+                  <span className="ml-1 text-[11px] text-muted-foreground">Analyzing industrial documents...</span>
                 </div>
 
                 {/* Step-by-step trace stream block if mode is agent */}
@@ -547,7 +546,7 @@ function ChatInputArea({
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={mode === "agent" ? "Input orchestrator goal (e.g. verify compliance)..." : "Query your second brain context..."}
+            placeholder={mode === "agent" ? "Describe your analysis goal (e.g. root cause analysis)..." : "Ask about equipment, SOPs, maintenance..."}
             disabled={isLoading}
             className="flex-1 pr-12 pl-4 bg-background/50 border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/20 rounded-xl h-11 text-xs"
           />
@@ -633,18 +632,18 @@ function ChatContent() {
     return (
       <div className="p-8 text-destructive text-center flex flex-col items-center justify-center min-h-[50vh] space-y-3">
         <AlertCircle className="w-8 h-8 text-destructive/80" />
-        <h3 className="font-semibold">Workspace Context Required</h3>
+        <h3 className="font-semibold">Plant Context Required</h3>
         <p className="text-xs text-muted-foreground max-w-sm leading-normal">
-          Please select a workspace from the sidebar menu to retrieve your Second Brain memory files.
+          Please select a plant from the sidebar menu to access industrial documents and procedures.
         </p>
       </div>
     );
   }
 
   const suggestedQuestions = [
-    "What projects are currently active?",
-    "What are my core long-term beliefs?",
-    "Check memory for compliance indicators"
+    "Why did Pump P-204 fail?",
+    "Show SOP for Boiler Startup",
+    "What maintenance happened last month?"
   ];
 
   return (
@@ -683,10 +682,10 @@ function ChatContent() {
         <DialogContent className="sm:max-w-md bg-popover border border-border rounded-xl shadow-2xl glass-panel-elevated text-foreground">
           <DialogHeader className="border-b border-border/40 pb-3">
             <DialogTitle className="text-sm font-semibold flex items-center gap-2">
-              <FileText className="w-4 h-4 text-primary" /> Citation Source Provenance
+              <FileText className="w-4 h-4 text-primary" /> Document Source
             </DialogTitle>
             <DialogDescription className="text-muted-foreground text-[11px]">
-              Retrieved evidence node aligned with system facts.
+              Retrieved evidence from industrial knowledge base.
             </DialogDescription>
           </DialogHeader>
           <CitationDialogContent activeCitation={activeCitation} />

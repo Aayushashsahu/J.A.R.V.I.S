@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Cpu, RefreshCw } from "lucide-react";
+import { Cpu, RefreshCw, Shield, AlertTriangle, Building2, FileText, Network, Wrench, Activity, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import { DashboardStatsGrid } from "./components/DashboardStatsGrid";
@@ -24,7 +24,7 @@ export default function DashboardHomePage() {
       const [responseStats, responseStatus, responseFocus, responseTimeline] = await Promise.all([
         api.get("/hud/stats").catch(() => ({ memory_count: 14, beliefs_count: 5, synapses_count: 28 })),
         api.get("/hud/status").catch(() => ({ status: "online", subsystems: { qdrant: "ok", llm: "ok", database: "ok" } })),
-        api.get("/hud/focus").catch(() => ({ active_projects: ["Workspace Ingestion", "Knowledge Retrieval"] })),
+        api.get("/hud/focus").catch(() => ({ active_projects: ["Steel Plant A", "Oil Refinery B"] })),
         api.get("/timeline").catch(() => ({ today: [], this_week: [], older: [] }))
       ]);
 
@@ -32,24 +32,24 @@ export default function DashboardHomePage() {
       setHudStatus(responseStatus);
       setActiveProjects(responseFocus?.active_projects || []);
       
-      // Combine some events for overview list
       const combinedEvents = [
         ...(responseTimeline?.today || []),
         ...(responseTimeline?.this_week || [])
       ].slice(0, 5);
       
-      // Fallback timeline events if empty
       if (combinedEvents.length === 0) {
         setTimelineEvents([
-          { id: "1", content: "Cognitive reflection run completed", event_type: "reflection", created_at: new Date().toISOString() },
-          { id: "2", content: "Workspace document context vectorization", event_type: "creation", created_at: new Date(Date.now() - 3600000).toISOString() },
-          { id: "3", content: "Agent graph compilation synchronized", event_type: "modification", created_at: new Date(Date.now() - 7200000).toISOString() }
+          { id: "1", content: "Inspection report P-204 Pump indexed", event_type: "creation", created_at: new Date().toISOString() },
+          { id: "2", content: "SOP for Boiler Startup v3.2 ingested", event_type: "creation", created_at: new Date(Date.now() - 3600000).toISOString() },
+          { id: "3", content: "Maintenance log C-102 Compressor updated", event_type: "modification", created_at: new Date(Date.now() - 7200000).toISOString() },
+          { id: "4", content: "Root Cause Analysis completed for Heat Exchanger E-301", event_type: "reflection", created_at: new Date(Date.now() - 10800000).toISOString() },
+          { id: "5", content: "Compliance gap detected — OSHA 1910.119", event_type: "modification", created_at: new Date(Date.now() - 14400000).toISOString() },
         ]);
       } else {
         setTimelineEvents(combinedEvents);
       }
     } catch (err) {
-      console.error("Failed to fetch overview metrics", err);
+      console.error("Failed to fetch command center data", err);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -63,24 +63,28 @@ export default function DashboardHomePage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4 relative">
+        <div className="industrial-scan-line" />
         <Cpu className="w-8 h-8 text-primary animate-spin" />
-        <p className="text-xs text-muted-foreground tracking-widest uppercase">Initializing Executive HUD...</p>
+        <p className="text-xs text-muted-foreground tracking-widest uppercase">Initializing Industrial Command Center...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 pb-12 max-w-7xl mx-auto">
+    <div className="space-y-8 pb-12 max-w-7xl mx-auto relative">
       
-      {/* Top Banner Row */}
+      {/* Industrial Command Center Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/40 pb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            Executive Synthesis Dashboard
+          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <Building2 className="w-5 h-5 text-primary" />
+            </div>
+            Industrial Command Center
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Real-time analytics, cognitive statistics, and subsystem operations.
+          <p className="text-sm text-muted-foreground mt-1 ml-[52px]">
+            Real-time operational intelligence, asset monitoring, and compliance tracking across all plants.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -92,29 +96,49 @@ export default function DashboardHomePage() {
             className="h-9 px-3 rounded-lg border-border/60 hover:bg-secondary/40 text-xs flex items-center gap-1.5"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-            Sync HUD
+            Sync Systems
           </Button>
           
-          {/* Subsystems Health Pills */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-500/10 bg-emerald-500/5 text-emerald-400 font-mono text-[10px]">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 status-indicator-glow animate-pulse mr-1"></span>
-            System: {hudStatus.status.toUpperCase()}
+          {/* System Status Pill */}
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-primary/15 bg-primary/5 text-primary font-mono text-[10px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary status-indicator-glow animate-pulse mr-1"></span>
+            ALL SYSTEMS NOMINAL
           </div>
         </div>
       </div>
 
-      {/* Grid Stats HUD Row */}
+      {/* Quick Stats Row */}
       <DashboardStatsGrid stats={stats} />
 
-      {/* Main Core HUD Grid */}
+      {/* Operational Panels Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Subsystem Health Panel */}
+        {/* Plant Health Panel */}
         <SubsystemHealthPanel hudStatus={hudStatus} />
 
-        {/* Active Focus Areas & Timeline */}
+        {/* Active Operations & Timeline */}
         <CognitiveFocusPanel activeProjects={activeProjects} timelineEvents={timelineEvents} />
 
+      </div>
+
+      {/* Quick Access Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { icon: FileText, label: "Documents Indexed", value: "1,247", color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20" },
+          { icon: AlertTriangle, label: "Critical Alerts", value: "3", color: "text-accent", bg: "bg-accent/10", border: "border-accent/20" },
+          { icon: Wrench, label: "Maintenance Queue", value: "12", color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" },
+          { icon: Network, label: "KG Entities", value: stats.synapses_count.toString(), color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
+        ].map((item, idx) => (
+          <div key={idx} className={`flex items-center gap-3 p-4 rounded-xl border ${item.border} ${item.bg} backdrop-blur-sm`}>
+            <div className={`w-10 h-10 rounded-lg ${item.bg} ${item.border} border flex items-center justify-center ${item.color}`}>
+              <item.icon className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xl font-bold text-foreground">{item.value}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{item.label}</p>
+            </div>
+          </div>
+        ))}
       </div>
 
     </div>

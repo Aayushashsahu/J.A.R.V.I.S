@@ -57,7 +57,7 @@ export default function LoginPage() {
             J
           </div>
           <CardTitle className="text-xl font-bold tracking-tight text-foreground">Welcome to J.A.R.V.I.S.</CardTitle>
-          <CardDescription className="text-xs text-muted-foreground mt-1">Login to access your enterprise second brain.</CardDescription>
+          <CardDescription className="text-xs text-muted-foreground mt-1">Industrial Knowledge Intelligence Platform</CardDescription>
         </CardHeader>
 
         <CardContent className="px-6 py-4">
@@ -114,12 +114,12 @@ export default function LoginPage() {
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Synchronizing Neural Link...
+                  Authenticating...
                 </>
               ) : (
                 <>
                   <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                  Connect Brain Key
+                  Access Command Center
                 </>
               )}
             </Button>

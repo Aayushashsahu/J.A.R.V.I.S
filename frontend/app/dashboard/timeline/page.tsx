@@ -64,7 +64,7 @@ export default function TimelinePage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-3">
         <Activity className="w-8 h-8 text-primary animate-spin" />
-        <span className="text-xs text-muted-foreground tracking-widest uppercase">Retrieving memory timeline...</span>
+        <span className="text-xs text-muted-foreground tracking-widest uppercase">Loading operations timeline...</span>
       </div>
     );
   }
@@ -120,8 +120,8 @@ export default function TimelinePage() {
         <div className="flex items-center gap-3">
           <Clock className="w-8 h-8 text-primary" />
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-foreground">Memory Timeline</h2>
-            <p className="text-sm text-muted-foreground mt-0.5">Track the sequential evolution and synapses formations of your Second Brain.</p>
+            <h2 className="text-2xl font-bold tracking-tight text-foreground">Operations Timeline</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">Track document ingestion, inspections, maintenance events, and compliance activity across all plants.</p>
           </div>
         </div>
       </div>
@@ -135,9 +135,9 @@ export default function TimelinePage() {
       ) : (
         <div className="border border-border/40 bg-card/25 rounded-2xl p-10 text-center text-muted-foreground flex flex-col items-center justify-center space-y-3 min-h-[250px] shadow-sm">
           <AlertCircle className="w-8 h-8 text-muted-foreground/40" />
-          <p className="text-sm font-semibold">No memory events logged yet.</p>
+          <p className="text-sm font-semibold">No operational events logged yet.</p>
           <p className="text-xs text-muted-foreground/80 max-w-sm leading-normal">
-            Memory events are logged when you ingest documents, run reflections, or execute agent planning.
+            Events are logged when you ingest documents, run analyses, or execute compliance checks.
           </p>
         </div>
       )}

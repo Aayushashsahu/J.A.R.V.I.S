@@ -2,7 +2,7 @@ import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "J.A.R.V.I.S."
+    PROJECT_NAME: str = "J.A.R.V.I.S. — Industrial Knowledge Intelligence"
     API_V1_STR: str = "/api/v1"
     
     # Security

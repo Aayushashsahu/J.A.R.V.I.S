@@ -44,7 +44,7 @@ export default function RegisterPage() {
             J
           </div>
           <CardTitle className="text-xl font-bold tracking-tight text-foreground">Join J.A.R.V.I.S.</CardTitle>
-          <CardDescription className="text-xs text-muted-foreground mt-1">Register a secure cognitive node key.</CardDescription>
+          <CardDescription className="text-xs text-muted-foreground mt-1">Create an account for the Industrial Knowledge Intelligence Platform.</CardDescription>
         </CardHeader>
 
         <CardContent className="px-6 py-4">
@@ -101,12 +101,12 @@ export default function RegisterPage() {
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Generating Brain Keys...
+                  Creating account...
                 </>
               ) : (
                 <>
                   <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                  Register Node Key
+                  Create Account
                 </>
               )}
             </Button>
@@ -115,10 +115,9 @@ export default function RegisterPage() {
         </CardContent>
 
         <CardFooter className="flex justify-center pb-8 pt-2">
-          <p className="text-xs text-muted-foreground select-none">
-            Already have an account?{" "}
+          <p className="text-xs text-muted-foreground select-none">              Already have an account?{" "}
             <Link href="/login" className="text-foreground hover:underline font-semibold transition-all">
-              Login credentials
+              Sign In
             </Link>
           </p>
         </CardFooter>

@@ -73,4 +73,4 @@ app.include_router(neural.router, prefix=f"{settings.API_V1_STR}", tags=["neural
 
 @app.get("/")
 def root():
-    return {"message": "Welcome to J.A.R.V.I.S. API"}
+    return {"message": "J.A.R.V.I.S. Industrial Knowledge Intelligence API", "version": "2.0", "description": "The Unified Asset & Operations Brain for industrial knowledge management"}

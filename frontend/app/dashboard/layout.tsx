@@ -127,26 +127,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [pathname, router, activeWorkspace, commandPaletteOpen]);
 
   const navItems = [
-    { name: "Overview", href: "/dashboard", icon: Home },
-    { name: "Memory Timeline", href: "/dashboard/timeline", icon: Clock },
-    { name: "Second Brain Chat", href: `/dashboard/chat?workspace=${activeWorkspace}`, icon: MessageSquare },
+    { name: "Command Center", href: "/dashboard", icon: Home },
+    { name: "Operations Timeline", href: "/dashboard/timeline", icon: Clock },
+    { name: "AI Copilot", href: `/dashboard/chat?workspace=${activeWorkspace}`, icon: MessageSquare },
     { name: "Document Ingestion", href: `/dashboard/documents?workspace=${activeWorkspace}`, icon: FileText },
     { name: "Knowledge Graph", href: "/dashboard/graph", icon: Network },
-        { name: "Neural Connections", href: "/dashboard/neural", icon: Sparkles },
-    { name: "Reflections & Beliefs", href: "/dashboard/beliefs", icon: BrainCircuit },
-    { name: "Smart Suggestions", href: "/dashboard/suggestions", icon: Lightbulb }
+    { name: "Neural Connections", href: "/dashboard/neural", icon: Sparkles },
+    { name: "Compliance & SOPs", href: "/dashboard/beliefs", icon: BrainCircuit },
+    { name: "Recommendations", href: "/dashboard/suggestions", icon: Lightbulb }
   ];
 
   // Commands for command palette
   const commandsList = [
-    { category: "Navigation", name: "Go to Workspace Overview", action: () => router.push("/dashboard"), icon: Home },
-    { category: "Navigation", name: "Go to Second Brain Chat", action: () => router.push(`/dashboard/chat?workspace=${activeWorkspace}`), icon: MessageSquare },
+    { category: "Navigation", name: "Go to Command Center", action: () => router.push("/dashboard"), icon: Home },
+    { category: "Navigation", name: "Go to AI Copilot", action: () => router.push(`/dashboard/chat?workspace=${activeWorkspace}`), icon: MessageSquare },
     { category: "Navigation", name: "Go to Document Ingestion", action: () => router.push(`/dashboard/documents?workspace=${activeWorkspace}`), icon: FileText },
     { category: "Navigation", name: "Go to Knowledge Graph", action: () => router.push("/dashboard/graph"), icon: Network },
-    { category: "Navigation", name: "Go to Reflections & Beliefs", action: () => router.push("/dashboard/beliefs"), icon: BrainCircuit },
-    { category: "Navigation", name: "Go to Smart Suggestions", action: () => router.push("/dashboard/suggestions"), icon: Lightbulb },
-    { category: "Navigation", name: "Go to Memory Timeline", action: () => router.push("/dashboard/timeline"), icon: Clock },
-    { category: "System", name: "Switch to Dark Mode", action: () => { setTheme("dark"); document.documentElement.classList.add("dark"); localStorage.setItem("theme", "dark"); }, icon: Moon },
+    { category: "Navigation", name: "Go to Compliance & SOPs", action: () => router.push("/dashboard/beliefs"), icon: BrainCircuit },
+    { category: "Navigation", name: "Go to Recommendations", action: () => router.push("/dashboard/suggestions"), icon: Lightbulb },
+    { category: "Navigation", name: "Go to Operations Timeline", action: () => router.push("/dashboard/timeline"), icon: Clock },
+    { category: "System", name: "Switch to Industrial Dark Mode", action: () => { setTheme("dark"); document.documentElement.classList.add("dark"); localStorage.setItem("theme", "dark"); }, icon: Moon },
     { category: "System", name: "Switch to Light Mode", action: () => { setTheme("light"); document.documentElement.classList.remove("dark"); localStorage.setItem("theme", "light"); }, icon: Sun },
     { category: "System", name: "Collapse/Expand Sidebar", action: () => toggleSidebar(), icon: ChevronLeft },
     { category: "Auth", name: "Log Out / Exit Platform", action: () => { localStorage.removeItem("token"); router.push("/login"); }, icon: LogOut },
@@ -181,7 +181,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Brand / Logo */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
           <div className="flex items-center gap-3 overflow-hidden min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-foreground text-background flex items-center justify-center font-bold tracking-tight shadow-md shrink-0 select-none">
+            <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold tracking-tight shadow-md shrink-0 select-none">
               J
             </div>
             {!sidebarCollapsed && (
@@ -210,7 +210,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           ) : (
             <div className="space-y-1.5">
-              <span className="text-[10px] uppercase font-semibold tracking-wider text-sidebar-foreground/40 block px-1">Active Space</span>
+              <span className="text-[10px] uppercase font-semibold tracking-wider text-sidebar-foreground/40 block px-1">Active Plant</span>
               <Select value={activeWorkspace} onValueChange={(v) => v && setActiveWorkspace(v)}>
                 <SelectTrigger className="w-full h-9 bg-sidebar-accent/50 border-sidebar-border/80 focus:ring-1 focus:ring-foreground/10 text-xs">
                   <SelectValue placeholder="Select Workspace" />
@@ -229,7 +229,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
           {!sidebarCollapsed && (
             <div className="text-[10px] font-semibold text-sidebar-foreground/30 uppercase tracking-widest mb-3 px-3 pt-2">
-              Cognitive Engine
+              Knowledge Intelligence
             </div>
           )}
           {navItems.map((item) => {
@@ -261,7 +261,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex items-center justify-between text-[11px] text-sidebar-foreground/50">
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 status-indicator-glow animate-pulse"></span>
-              {!sidebarCollapsed && <span>Engine Active</span>}
+              {!sidebarCollapsed &&              <span>Systems Nominal</span>}
             </div>
             
             {/* Theme toggle */}
@@ -306,7 +306,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           
           {/* Breadcrumb / Title Indicator */}
           <div className="flex items-center gap-3">
-            <span className="text-xs font-medium font-mono text-muted-foreground/60">J.A.R.V.I.S.</span>
+            <span className="text-xs font-medium font-mono text-muted-foreground/60">J.A.R.V.I.S. / Industrial</span>
             <span className="text-xs text-muted-foreground/30">/</span>
             <span className="text-xs font-semibold tracking-tight text-foreground/80">
               {navItems.find(item => pathname === item.href.split("?")[0])?.name || "Overview"}
@@ -326,10 +326,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </kbd>
             </button>
             
-            {/* Quick Status Pill */}
-            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-500/10 bg-emerald-500/5 text-emerald-500 font-mono text-[10px]">
+            {/* Quick Status Pill */}              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/20 bg-primary/5 text-primary font-mono text-[10px]">
               <Shield className="w-3 h-3" />
-              Secure RAG Node
+              Industrial Secure
             </div>
           </div>
         </header>
@@ -349,7 +348,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               type="text" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search workspaces, pages, engine controls..." 
+              placeholder="Search plants, assets, documents, procedures..." 
               className="w-full bg-transparent border-0 outline-none text-sm text-foreground placeholder:text-muted-foreground focus:ring-0"
               autoFocus
             />

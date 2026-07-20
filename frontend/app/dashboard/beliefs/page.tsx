@@ -43,8 +43,8 @@ export default function BeliefsPage() {
         <div className="flex items-center gap-3">
           <BrainCircuit className="w-8 h-8 text-primary" />
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-foreground">Reflections & Beliefs</h2>
-            <p className="text-sm text-muted-foreground mt-0.5">High-level beliefs formed by J.A.R.V.I.S. based on your recent activity.</p>
+            <h2 className="text-2xl font-bold tracking-tight text-foreground">Compliance & SOPs</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">Safety procedures, compliance records, and operational standards tracked by J.A.R.V.I.S.</p>
           </div>
         </div>
       </div>
@@ -52,16 +52,16 @@ export default function BeliefsPage() {
       {loading ? (
         <div className="flex flex-col items-center justify-center min-h-[40vh] space-y-3">
           <Activity className="w-8 h-8 text-primary animate-spin" />
-          <span className="text-xs text-muted-foreground tracking-widest uppercase">Formulating beliefs matrix...</span>
+          <span className="text-xs text-muted-foreground tracking-widest uppercase">Loading compliance records...</span>
         </div>
       ) : (
         <div className="space-y-6">
           {beliefs.length === 0 ? (
             <div className="border border-border/40 bg-card/25 rounded-2xl p-10 text-center text-muted-foreground flex flex-col items-center justify-center space-y-3 min-h-[250px] shadow-sm">
               <AlertCircle className="w-8 h-8 text-muted-foreground/40" />
-              <p className="text-sm font-semibold">No beliefs generated yet.</p>
+              <p className="text-sm font-semibold">No compliance records found.</p>
               <p className="text-xs text-muted-foreground/80 max-w-sm leading-normal">
-                Add document context files or chat with your Second Brain to help J.A.R.V.I.S. formulate reflections.
+                Upload safety procedures, SOPs, or maintenance documents to populate compliance tracking.
               </p>
             </div>
           ) : (
@@ -94,12 +94,12 @@ export default function BeliefsPage() {
                     <div className="px-5 py-3.5 bg-secondary/15 border-t border-border/30 flex items-center justify-between text-[10px] text-muted-foreground/70">
                       <div className="flex items-center gap-1.5 font-mono">
                         <Calendar className="w-3.5 h-3.5 text-muted-foreground/50" />
-                        Formed: {new Date(belief.created_at).toLocaleDateString()}
+                        Created: {new Date(belief.created_at).toLocaleDateString()}
                       </div>
                       
                       <div className="flex items-center gap-1.5">
                         <Sparkles className="w-3 h-3 text-amber-500" />
-                        Reflected Node
+                        Compliance Record
                       </div>
                     </div>
 
