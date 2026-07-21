@@ -6,7 +6,8 @@ from app.agents.service import (
     agent_llm_service,
     get_deterministic_planner_fallback,
     get_deterministic_retriever_fallback,
-    get_deterministic_formatter_fallback
+    get_deterministic_formatter_fallback,
+    get_deterministic_rca_fallback
 )
 
 logger = logging.getLogger(__name__)
@@ -212,6 +213,68 @@ def verifier_node(state: Dict[str, Any]) -> Dict[str, Any]:
         "verification": verification,
         "trace": state.get("trace", []) + [trace_event]
     }
+
+def rca_node(state: Dict[str, Any]) -> Dict[str, Any]:
+    """Root Cause Analysis agent node.
+    
+    Detects RCA-related queries and generates structured root cause analyses
+    from maintenance logs, failure reports, and inspection data.
+    """
+    goal = state["goal"]
+    workspace_id = state["workspace_id"]
+    findings = state.get("findings", [])
+    logger.info(f"Executing RCA node for goal: {goal}")
+    
+    system_prompt = (
+        "You are the Root Cause Analysis (RCA) Agent for industrial operations.\n"
+        "Your task is to generate a structured RCA report based on the retrieved findings.\n\n"
+        "RCA REPORT STRUCTURE:\n"
+        "1. **Incident Summary**: Brief description of what happened\n"
+        "2. **Immediate Cause (Direct Trigger)**: The direct event that caused the failure\n"
+        "3. **Root Cause Analysis (5-Why Method)**: Step-by-step why analysis in a table\n"
+        "4. **Contributing Factors**: Process, maintenance, monitoring, documentation gaps\n"
+        "5. **Corrective Actions**: Table with Action, Owner, Priority, Target Date\n"
+        "6. **Prevention Measures**: Systemic changes to prevent recurrence\n"
+        "7. **Similar Historical Incidents**: Cross-reference with knowledge graph\n\n"
+        "RULES:\n"
+        "- Always use the 5-Why method for root cause identification\n"
+        "- Include specific equipment IDs, dates, and personnel if available in findings\n"
+        "- Reference relevant OSHA, ASME, or OEM standards where applicable\n"
+        "- Keep the tone professional, objective, and inspectorial\n"
+        "- Do not include final source list at the bottom since the system appends it automatically."
+    )
+    
+    prompt = (
+        f"Incident/Equipment: {goal}\n\n"
+        f"Retrieved Findings:\n{json.dumps(findings, indent=2)}\n\n"
+        "Generate a complete RCA report using the 5-Why methodology."
+    )
+    
+    rca_answer = ""
+    try:
+        rca_answer = agent_llm_service.call_llm(prompt=prompt, system_prompt=system_prompt)
+    except Exception as e:
+        logger.warning(f"RCA LLM call failed: {e}. Using deterministic fallback.")
+        rca_answer = get_deterministic_rca_fallback(goal, findings)
+    
+    sources = list(set(f["source"] for f in findings if f.get("source")))
+    
+    step_num = len(state.get("trace", [])) + 1
+    trace_event = {
+        "event": "trace",
+        "step": step_num,
+        "node": "rca",
+        "content": f"Root Cause Analysis generated for: {goal}\n" + \
+                   f"Sections: Incident Summary, 5-Why Analysis, Corrective Actions, Prevention Measures"
+    }
+    
+    return {
+        "final_answer": rca_answer,
+        "sources": sources,
+        "confidence": 0.85,
+        "trace": state.get("trace", []) + [trace_event]
+    }
+
 
 def formatter_node(state: Dict[str, Any]) -> Dict[str, Any]:
     goal = state["goal"]

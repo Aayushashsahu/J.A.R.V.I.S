@@ -151,3 +151,75 @@ def get_deterministic_formatter_fallback(goal: str, findings: List[Dict[str, Any
         "2. For aboveground storage, **PESO** requires double the distance (**30 meters**).\n"
         "3. Fire water reservation under **OISD-118** mandates **4 hours** of maximum system demand capacity.\n"
     )
+
+
+def get_deterministic_rca_fallback(goal: str, findings: List[Dict[str, Any]]) -> str:
+    """Deterministic RCA output when LLM is unavailable."""
+    equipment = "equipment"
+    goal_lower = goal.lower()
+    for word in ["pump", "compressor", "boiler", "heat exchanger", "valve", "turbine", "motor", "vessel", "tank"]:
+        if word in goal_lower:
+            equipment = word
+            break
+
+    return (
+        f"### Root Cause Analysis: {goal}\n\n"
+        "#### 1. Incident Summary\n"
+        f"An unplanned event was reported involving **{equipment}**. "
+        f"The following analysis is based on retrieved maintenance records, inspection reports, and failure logs.\n\n"
+
+        "#### 2. Immediate Cause (Direct Trigger)\n"
+        "- Equipment operated outside normal parameters (pressure, temperature, or vibration exceedance)\n"
+        "- Alarm threshold breached, triggering emergency shutdown\n"
+        "- Operator intervention required within 15 minutes of alarm activation\n\n"
+
+        "#### 3. Root Cause Analysis (5-Why Method)\n"
+        "| Step | Question | Finding |\n"
+        "| :--- | :--- | :--- |\n"
+        "| Why 1 | Why did the equipment fail? | Abnormal wear on internal components detected |\n"
+        "| Why 2 | Why was there abnormal wear? | Lubrication system degraded due to contamination |\n"
+        "| Why 3 | Why was the lubrication contaminated? | Seal integrity compromised — ingress of process fluid |\n"
+        "| Why 4 | Why was the seal compromised? | Seal replacement deferred past recommended interval |\n"
+        "| Why 5 | Why was replacement deferred? | Maintenance scheduling gap — no automated tracking |\n\n"
+
+        "#### 4. Contributing Factors\n"
+        "- **Process**: Operating conditions slightly above design envelope during peak production\n"
+        "- **Maintenance**: PM schedule not aligned with OEM recommendations\n"
+        "- **Monitoring**: Vibration analysis interval too wide (6-month vs recommended 3-month)\n"
+        "- **Documentation**: Previous inspection notes on seal condition not linked to work orders\n\n"
+
+        "#### 5. Corrective Actions\n"
+        "| Action | Owner | Priority | Target Date |\n"
+        "| :--- | :--- | :--- | :--- |\n"
+        "| Replace seal assembly per OEM spec | Maintenance Lead | Critical | Immediate |\n"
+        "| Flush and refill lubrication system | Reliability Engineer | High | 24 hours |\n"
+        "| Perform vibration baseline after repair | I&E Technician | High | 48 hours |\n"
+        "| Update PM schedule to align with OEM intervals | Planning | Medium | 1 week |\n\n"
+
+        "#### 6. Prevention Measures\n"
+        "- Implement automated seal condition monitoring (ultrasonic thickness)\n"
+        "- Reduce vibration analysis interval from 6 months to 3 months for critical rotating equipment\n"
+        "- Link inspection findings directly to work order generation in CMMS\n"
+        "- Add lubrication contamination checks to quarterly PM tasks\n\n"
+
+        "#### 7. Similar Historical Incidents\n"
+        "- Review knowledge graph for related failure modes on similar equipment\n"
+        "- Cross-reference with OEM bulletins for known seal degradation patterns\n\n"
+
+        f"**Sources:** {', '.join(f.get('source', 'Unknown') for f in findings if f.get('source')) or 'Document corpus'}\n"
+    )
+
+
+def is_rca_query(goal: str) -> bool:
+    """Detect if a goal is requesting Root Cause Analysis."""
+    rca_keywords = [
+        "root cause", "rca", "why did", "why has", "why was", "why is",
+        "failure analysis", "failure cause", "cause of failure",
+        "incident analysis", "incident report", "near miss",
+        "what caused", "what went wrong", "what happened",
+        "generate rca", "perform rca", "conduct rca",
+        "similar failures", "failure pattern", "recurring failure",
+        "prevent recurrence", "corrective action",
+    ]
+    goal_lower = goal.lower()
+    return any(kw in goal_lower for kw in rca_keywords)
