@@ -93,22 +93,16 @@ async def upload_document(
             from sqlalchemy import func
             import json
 
-            # Extract entities via LLM
-            text_content = "\n".join(texts[:3])  # Use first 3 chunks for extraction
-            extract_prompt = f"""
-Extract key PKM Entities (Goals, Projects, Interests) and General Entities (People, Companies, Technologies) from the following text.
-Return ONLY valid JSON:
-{{"pkm_entities": [{{"category": "Goal", "value": "...", "confidence": 80}}], "entities": [{{"type": "Person", "name": "..."}}]}}
-Text:
-{text_content[:2000]}
-"""
-            response_text = llm_provider.generate_text(extract_prompt, "You are an AI extracting structured data.")
-            clean_resp = response_text.replace("```json", "").replace("```", "").strip()
-            extract_data = json.loads(clean_resp)
+            # ── Industrial Entity Extraction (regex-based, no LLM needed) ──
+            from app.services.industrial_extractor import industrial_extractor
+            full_text = "\n".join(texts)
+            industrial_entities = industrial_extractor.extract_for_pkm(full_text, safe_filename)
+            industrial_kg_entities = industrial_extractor.extract_for_kg(full_text, safe_filename)
+            logger.info(f"[Ingestion] Industrial extraction: {len(industrial_entities)} entities found")
 
-            # Store PKM entities
+            # Store industrial PKM entities
             pkm_count = 0
-            for pkm in extract_data.get("pkm_entities", []):
+            for pkm in industrial_entities:
                 value = pkm.get("value", "").strip()
                 if not value:
                     continue
@@ -125,7 +119,7 @@ Text:
                         value=value,
                         confidence=pkm.get("confidence", 50),
                         source_file=safe_filename,
-                        evidence_type="structured_memory",
+                        evidence_type="industrial_extraction",
                         priority=2
                     )
                     db.add(new_pkm)
@@ -133,9 +127,9 @@ Text:
                     db.add(KnowledgeGraphNode(user_id=current_user.id, node_type="PKMEntity", node_id=new_pkm.id))
                     pkm_count += 1
 
-            # Store general entities
+            # Store industrial general entities (Equipment, Regulation, etc.)
             ent_count = 0
-            for ent in extract_data.get("entities", []):
+            for ent in industrial_kg_entities:
                 name = ent.get("name", "").strip()
                 if not name:
                     continue
@@ -155,7 +149,6 @@ Text:
                 KnowledgeGraphNode.user_id == current_user.id
             ).all()
             if len(all_new_nodes) > 1:
-                # Connect new nodes to each other (skip self-loops and duplicates)
                 for i, node_a in enumerate(all_new_nodes):
                     for node_b in all_new_nodes[i+1:]:
                         existing_edge = db.query(KnowledgeGraphEdge).filter(
