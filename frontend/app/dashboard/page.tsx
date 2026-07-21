@@ -10,7 +10,19 @@ import { SubsystemHealthPanel } from "./components/SubsystemHealthPanel";
 import { CognitiveFocusPanel } from "./components/CognitiveFocusPanel";
 
 export default function DashboardHomePage() {
-  const [stats, setStats] = useState({ memory_count: 0, beliefs_count: 0, synapses_count: 0 });
+  const [stats, setStats] = useState({
+    documents: 0,
+    beliefs: 0,
+    pkmEntities: 0,
+    chatSessions: 0,
+    kgNodes: 0,
+    kgEdges: 0,
+    entities: 0,
+    suggestions: 0,
+    timelineEvents: 0,
+    equipment: 0,
+    regulations: 0,
+  });
   const [hudStatus, setHudStatus] = useState({ status: "online", subsystems: { qdrant: "ok", llm: "ok", database: "ok" } });
   const [activeProjects, setActiveProjects] = useState<string[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -22,7 +34,11 @@ export default function DashboardHomePage() {
     setRefreshing(true);
     try {
       const [responseStats, responseStatus, responseFocus, responseTimeline] = await Promise.all([
-        api.get("/hud/stats").catch(() => ({ memory_count: 14, beliefs_count: 5, synapses_count: 28 })),
+        api.get("/dashboard/stats").catch(() => ({
+          documents: 0, beliefs: 0, pkmEntities: 0, chatSessions: 0,
+          kgNodes: 0, kgEdges: 0, entities: 0, suggestions: 0,
+          timelineEvents: 0, equipment: 0, regulations: 0,
+        })),
         api.get("/hud/status").catch(() => ({ status: "online", subsystems: { qdrant: "ok", llm: "ok", database: "ok" } })),
         api.get("/hud/focus").catch(() => ({ active_projects: ["Steel Plant A", "Oil Refinery B"] })),
         api.get("/timeline").catch(() => ({ today: [], this_week: [], older: [] }))
@@ -107,7 +123,7 @@ export default function DashboardHomePage() {
         </div>
       </div>
 
-      {/* Quick Stats Row */}
+      {/* Quick Stats Row - Real data from API */}
       <DashboardStatsGrid stats={stats} />
 
       {/* Operational Panels Grid */}
@@ -121,13 +137,13 @@ export default function DashboardHomePage() {
 
       </div>
 
-      {/* Quick Access Cards */}
+      {/* Quick Access Cards - Real data from API */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { icon: FileText, label: "Documents Indexed", value: "1,247", color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20" },
-          { icon: AlertTriangle, label: "Critical Alerts", value: "3", color: "text-accent", bg: "bg-accent/10", border: "border-accent/20" },
-          { icon: Wrench, label: "Maintenance Queue", value: "12", color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" },
-          { icon: Network, label: "KG Entities", value: stats.synapses_count.toString(), color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
+          { icon: FileText, label: "Documents Indexed", value: stats.documents.toLocaleString(), color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20" },
+          { icon: AlertTriangle, label: "Critical Alerts", value: stats.suggestions.toString(), color: "text-accent", bg: "bg-accent/10", border: "border-accent/20" },
+          { icon: Wrench, label: "Equipment Tracked", value: stats.equipment.toString(), color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" },
+          { icon: Network, label: "KG Entities", value: stats.kgNodes.toString(), color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
         ].map((item, idx) => (
           <div key={idx} className={`flex items-center gap-3 p-4 rounded-xl border ${item.border} ${item.bg} backdrop-blur-sm`}>
             <div className={`w-10 h-10 rounded-lg ${item.bg} ${item.border} border flex items-center justify-center ${item.color}`}>

@@ -1,10 +1,18 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { FileText, Shield, Network, Wrench } from "lucide-react";
+import { FileText, Shield, Network, Wrench, Cpu, AlertTriangle } from "lucide-react";
 
 export interface DashboardStats {
-  memory_count: number;
-  beliefs_count: number;
-  synapses_count: number;
+  documents: number;
+  beliefs: number;
+  pkmEntities: number;
+  chatSessions: number;
+  kgNodes: number;
+  kgEdges: number;
+  entities: number;
+  suggestions: number;
+  timelineEvents: number;
+  equipment: number;
+  regulations: number;
 }
 
 export function DashboardStatsGrid({ stats }: { stats: DashboardStats }) {
@@ -15,7 +23,7 @@ export function DashboardStatsGrid({ stats }: { stats: DashboardStats }) {
         <CardContent className="p-5 flex items-center justify-between">
           <div className="space-y-1">
             <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground block">Documents Indexed</span>
-            <span className="text-2xl font-semibold tracking-tight text-foreground">{stats.memory_count}</span>
+            <span className="text-2xl font-semibold tracking-tight text-foreground">{stats.documents}</span>
             <span className="text-[10px] text-muted-foreground/80 block">Engineering docs & procedures</span>
           </div>
           <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
@@ -24,16 +32,16 @@ export function DashboardStatsGrid({ stats }: { stats: DashboardStats }) {
         </CardContent>
       </Card>
 
-      {/* Compliance Records */}
+      {/* Equipment Tracked */}
       <Card className="bg-card/40 backdrop-blur-md border-border/50 hover:border-accent/20 hover-lift shadow-sm">
         <CardContent className="p-5 flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground block">Compliance Records</span>
-            <span className="text-2xl font-semibold tracking-tight text-foreground">{stats.beliefs_count}</span>
-            <span className="text-[10px] text-muted-foreground/80 block">SOPs & safety procedures</span>
+            <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground block">Equipment Tracked</span>
+            <span className="text-2xl font-semibold tracking-tight text-foreground">{stats.equipment}</span>
+            <span className="text-[10px] text-muted-foreground/80 block">Pumps, compressors, exchangers</span>
           </div>
           <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500">
-            <Shield className="w-5 h-5" />
+            <Wrench className="w-5 h-5" />
           </div>
         </CardContent>
       </Card>
@@ -43,8 +51,8 @@ export function DashboardStatsGrid({ stats }: { stats: DashboardStats }) {
         <CardContent className="p-5 flex items-center justify-between">
           <div className="space-y-1">
             <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground block">KG Entities</span>
-            <span className="text-2xl font-semibold tracking-tight text-foreground">{stats.synapses_count}</span>
-            <span className="text-[10px] text-muted-foreground/80 block">Equipment, assets & relations</span>
+            <span className="text-2xl font-semibold tracking-tight text-foreground">{stats.kgNodes}</span>
+            <span className="text-[10px] text-muted-foreground/80 block">{stats.kgEdges} relationships mapped</span>
           </div>
           <div className="w-10 h-10 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
             <Network className="w-5 h-5" />
@@ -52,16 +60,16 @@ export function DashboardStatsGrid({ stats }: { stats: DashboardStats }) {
         </CardContent>
       </Card>
 
-      {/* Active Maintenance */}
+      {/* Compliance & Regulations */}
       <Card className="bg-card/40 backdrop-blur-md border-border/50 hover:border-emerald-500/20 hover-lift shadow-sm">
         <CardContent className="p-5 flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground block">Maintenance Items</span>
-            <span className="text-2xl font-semibold tracking-tight text-foreground">12</span>
-            <span className="text-[10px] text-muted-foreground/80 block">Scheduled & pending work orders</span>
+            <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground block">Regulations Tracked</span>
+            <span className="text-2xl font-semibold tracking-tight text-foreground">{stats.regulations}</span>
+            <span className="text-[10px] text-muted-foreground/80 block">{stats.beliefs} compliance records</span>
           </div>
           <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-            <Wrench className="w-5 h-5" />
+            <Shield className="w-5 h-5" />
           </div>
         </CardContent>
       </Card>
